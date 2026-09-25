@@ -18,18 +18,15 @@ struct RootView: View {
     var body: some View {
         NavigationStack {
             HomeView(model: model)
-                .navigationDestination(
-                    isPresented: Binding(
-                        get: { model.phase == .review },
-                        set: { isPresented in
-                            if !isPresented, model.phase == .review {
-                                model.dismissReview()
-                            }
-                        }
-                    )
-                ) {
+                .navigationDestination(item: $model.presentedReviewID) { _ in
                     ReviewView(model: model)
                 }
+        }
+        .background(Color(.systemBackground).ignoresSafeArea())
+        .onChange(of: model.presentedReviewID) { _, newValue in
+            if newValue == nil, model.phase == .review {
+                model.dismissReview()
+            }
         }
         .task {
             await model.consumePendingImport()

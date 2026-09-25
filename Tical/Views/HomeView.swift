@@ -15,6 +15,7 @@ struct PickedPhoto: Transferable {
 struct HomeView: View {
     @Bindable var model: TicketImportModel
     @State private var pickerItem: PhotosPickerItem?
+    @State private var showingFileImporter = false
 
     var body: some View {
         ScrollView {
@@ -34,6 +35,19 @@ struct HomeView: View {
                 .disabled(model.phase == .extracting)
                 .accessibilityLabel("Choose screenshot")
                 .accessibilityHint("Opens your photo library so Tical can read a ticket image on this iPhone.")
+
+                Button {
+                    showingFileImporter = true
+                } label: {
+                    Label("Choose File", systemImage: "folder")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                }
+                .buttonStyle(.bordered)
+                .disabled(model.phase == .extracting)
+                .accessibilityLabel("Choose file")
+                .accessibilityHint("Opens Files so Tical can read a ticket image on this iPhone.")
 
                 VStack(alignment: .leading, spacing: 8) {
                     Label("Or share a screenshot to Tical from Photos.", systemImage: "square.and.arrow.up")
@@ -60,6 +74,13 @@ struct HomeView: View {
             Task {
                 await load(newItem)
             }
+        }
+        .fileImporter(
+            isPresented: $showingFileImporter,
+            allowedContentTypes: [.image],
+            allowsMultipleSelection: false
+        ) { result in
+            loadFile(result)
         }
     }
 
@@ -93,6 +114,26 @@ struct HomeView: View {
             await model.importImageData(picked.data)
         } catch {
             model.notice = .message("Tical couldn't open that photo.")
+        }
+    }
+
+    private func loadFile(_ result: Result<[URL], Error>) {
+        let url: URL
+        do {
+            guard let picked = try result.get().first else { return }
+            url = picked
+        } catch {
+            model.notice = .message("Tical couldn't open that file.")
+            return
+        }
+
+        let accessing = url.startAccessingSecurityScopedResource()
+        defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+        do {
+            let data = try Data(contentsOf: url)
+            Task { await model.importImageData(data) }
+        } catch {
+            model.notice = .message("Tical couldn't open that file.")
         }
     }
 }

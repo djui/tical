@@ -28,6 +28,8 @@ final class TicketImportModel {
     }
 
     var phase: Phase = .ready
+    /// Set only while the review screen should be pushed. Nil keeps HomeView as the root.
+    var presentedReviewID: UUID?
     var draft: TicketDraft?
     var screenshot: UIImage?
     var barcodeImage: UIImage?
@@ -49,6 +51,7 @@ final class TicketImportModel {
         barcodeImage = nil
         draft = nil
         phase = .extracting
+        presentedReviewID = nil
 
         let scan = await Task.detached(priority: .userInitiated) {
             VisionTicketScanner.scan(imageData: data)
@@ -59,6 +62,7 @@ final class TicketImportModel {
             barcodeImage = UIImage(data: jpeg)
         }
         phase = .review
+        presentedReviewID = nextDraft.id
         isImporting = false
         await consumePendingImport()
     }
@@ -71,6 +75,7 @@ final class TicketImportModel {
 
     func dismissReview() {
         phase = .ready
+        presentedReviewID = nil
     }
 
     func addToCalendar() async {
