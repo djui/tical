@@ -11,7 +11,7 @@ class ShareViewController: UIViewController {
     private let statusLabel = UILabel()
     private let activity = UIActivityIndicatorView(style: .medium)
 
-override func viewDidLoad() {
+    override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
         statusLabel.font = .preferredFont(forTextStyle: .body)
