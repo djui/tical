@@ -22,7 +22,7 @@ xcodebuild test -project Tical.xcodeproj -scheme Tical -destination 'platform=iO
 1. Tap one of the recent screenshots on the home screen, choose from Photos or Files (an image or a PDF), paste, drag and drop, or share to Tical from Photos, Files, Mail, or Safari. For a PDF, Tical uses the first page that carries a code.
 2. Vision reads the code (QR, Aztec, PDF417, Code 128, Data Matrix) and the text. Binary QR codes are decoded to their bytes, so the pass carries the same content.
 3. Apple Intelligence reads the ticket image and its text into fields. If the model isn't available, doesn't answer within 20 seconds, or fails, the local parser (English and German labels, `NSDataDetector`) fills them in. Codes the model reports are only kept if they're printed on the ticket.
-4. The review screen shows the pass as Wallet will show it, in a color taken from the ticket. Every field can be edited.
+4. The review screen shows the pass as Wallet will show it, in a color taken from the ticket. Every field can be edited, and you can pick another color, an icon for the kind of event, and a background photo.
 5. **Calendar** opens the system event editor, filled in. The editor runs outside Tical, so Tical needs no calendar access and never sees your other events.
 6. **Add to Apple Wallet** (Apple's own badge) builds and signs the pass on the device and shows the system sheet to add it. Tical redraws the code and reads it back before offering it, and says so when it can't confirm a match.
 
@@ -43,6 +43,17 @@ A certificate file without Apple's intermediate certificate makes iOS download t
 On iPad, which has no Wallet, the button sends the signed pass to another device instead. **Share Pass File** in the review screen's menu does the same on iPhone.
 
 Passes are static: there is no web service to update them.
+
+### Icon and background
+
+The icon (Ticket, Music, Film, Theater, Sports, Museum, Talk, Star) is the pass logo and the icon in its notifications. Tical draws these itself: SF Symbols may not be used in logos.
+
+A background photo comes in two styles:
+
+- **Blurred**: an event ticket with the photo as `background.png`, which Wallet always blurs.
+- **Poster**: the photo stays sharp as the `artwork.png` of a poster pass (`posterGeneric`, iOS 27 and watchOS 27). The pass also carries the event ticket, which devices with older versions show instead. Wallet's poster *event* tickets don't allow barcodes, so they aren't an option for Tical.
+
+With a photo, the pass color is the photo's average color, which also decides between white and dark text.
 
 ## Share extension and App Group
 
@@ -95,6 +106,6 @@ The screenshots come from the iPhone 18 Pro simulator with the status bar set to
 
 - `Import/`: files from pickers and the share extension; PDF pages and image decoding.
 - `Scanning/`: Vision, the language model, the local parser, and the pass color.
-- `Wallet/`: pass building and signing (DER, X.509, CMS, PKCS #10, ZIP), the keychain, and certificate setup.
+- `Wallet/`: pass building and signing (DER, X.509, CMS, PKCS #10, ZIP), the pass symbols and background photo, the keychain, and certificate setup.
 - `Calendar/`: the event and the system editor.
 - `Views/`: SwiftUI screens.

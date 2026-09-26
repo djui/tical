@@ -60,6 +60,9 @@ final class TicketImport: Identifiable, Hashable {
     /// The color Tical picked from the ticket.
     private(set) var sampledColor: RGBColor = .brand
     var passColor: RGBColor = .brand
+    var passSymbol: PassSymbol = .ticket
+    /// A photo behind the pass details, in place of the pass color.
+    var background: PassBackground?
     var addedToCalendar = false
     var walletPassURL: URL?
 
@@ -149,13 +152,33 @@ final class TicketImport: Identifiable, Hashable {
 
     // MARK: - Wallet
 
+    /// The color the pass uses. With a background photo, it's the photo's, since the text sits on it.
+    var effectivePassColor: RGBColor { background?.color ?? passColor }
+
     /// What goes on the pass, as the review screen shows it now.
     var passContent: PassContent {
         PassContent(
             draft: draft,
             barcode: codeStatus == .unsupported ? nil : walletBarcode,
-            color: passColor
+            color: effectivePassColor,
+            symbol: passSymbol,
+            background: background
         )
+    }
+
+    /// Puts a photo behind the pass details. Returns false when the data isn't an image.
+    func setBackground(_ data: Data) async -> Bool {
+        let style = background?.style ?? .blurred
+        guard let background = await Self.decodeBackground(data, style: style) else { return false }
+        withAnimation(.smooth) {
+            self.background = background
+        }
+        return true
+    }
+
+    @concurrent
+    private nonisolated static func decodeBackground(_ data: Data, style: PassBackground.Style) async -> PassBackground? {
+        PassBackground(data: data, style: style)
     }
 
     /// Builds and signs the pass on this iPhone.

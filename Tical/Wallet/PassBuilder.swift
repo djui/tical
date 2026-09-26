@@ -5,14 +5,17 @@ import UIKit
 nonisolated struct PassContent: Sendable {
     var draft: TicketDraft
     var barcode: WalletBarcode?
+    /// With a background photo, the photo's color.
     var color: RGBColor
+    var symbol: PassSymbol = .ticket
+    var background: PassBackground?
     var serialNumber = UUID().uuidString
 }
 
 /// Builds and signs an event ticket pass on this iPhone.
 nonisolated enum PassBuilder {
     static func archive(for content: PassContent, credentials: PassCredentials) throws -> Data {
-        var files = PassArtwork.files(foreground: content.color.foreground)
+        var files = PassArtwork.files(for: content)
         files["pass.json"] = try passJSON(for: content, signing: credentials.signing)
         return try PassPackage(files: files).signedArchive(
             signer: credentials.signing.certificate,
@@ -90,6 +93,31 @@ nonisolated enum PassBuilder {
             "backFields": back,
         ]
 
+        if content.background?.style == .poster {
+            // Wallet prefers the poster style where it has it and shows the event ticket elsewhere.
+            // Below the photo, a poster has room for two primary fields and one footer line.
+            // Posters write labels in title case, which Wallet also lists under the pass.
+            var posterPrimary = [field("event", String(localized: "Event"), title)]
+            var rest: [[String: Any]] = []
+            let venue = location.isEmpty ? nil : field("venue", String(localized: "Venue"), location)
+            if let start = draft.start, !draft.startTimeIsAssumed {
+                posterPrimary.append(field("starts", String(localized: "Starts"), iso(start), dateStyle: "PKDateStyleNone", timeStyle: "PKDateStyleShort"))
+                if let venue { rest.append(venue) }
+            } else if let venue {
+                posterPrimary.append(venue)
+            }
+            if !seat.isEmpty { rest.insert(field("seat", String(localized: "Seat"), seat), at: 0) }
+            if !booking.isEmpty { rest.append(field("booking", String(localized: "Booking"), booking)) }
+            pass["posterGeneric"] = [
+                "headerFields": header,
+                "primaryFields": posterPrimary,
+                "footerFields": Array(rest.prefix(1)),
+                // Shown in the Additional Info section under the pass.
+                "additionalInfoFields": Array(rest.dropFirst()),
+                "backFields": back,
+            ]
+        }
+
         if let barcode = content.barcode {
             var entry: [String: Any] = [
                 "format": barcode.format.rawValue,
@@ -139,45 +167,72 @@ nonisolated enum PassBuilder {
     }
 }
 
-/// The small images every pass carries, drawn with Tical's ticket glyph.
+/// The images on a pass: the symbol as its logo and icon, and the background photo.
 nonisolated enum PassArtwork {
-    static func files(foreground: RGBColor) -> [String: Data] {
+    /// Wallet's sizes, in points.
+    static let backgroundSize = CGSize(width: 343, height: 503)
+    static let artworkSize = CGSize(width: 358, height: 448)
+
+    static func files(for content: PassContent) -> [String: Data] {
         var files: [String: Data] = [:]
         for scale in 1...3 {
             let suffix = scale == 1 ? "" : "@\(scale)x"
-            files["icon\(suffix).png"] = icon(scale: CGFloat(scale))
-            files["logo\(suffix).png"] = logo(color: foreground, scale: CGFloat(scale))
+            files["icon\(suffix).png"] = icon(content.symbol, color: content.color, scale: CGFloat(scale))
+            files["logo\(suffix).png"] = logo(content.symbol, color: content.color.foreground, scale: CGFloat(scale))
+        }
+        guard let background = content.background else { return files }
+
+        // Wallet blurs the background, which hides the difference to a 3x image.
+        files["background.png"] = photo(background, size: backgroundSize, scale: 1)
+        files["background@2x.png"] = photo(background, size: backgroundSize, scale: 2)
+        if background.style == .poster {
+            files["artwork@2x.png"] = photo(background, size: artworkSize, scale: 2)
+            files["artwork@3x.png"] = photo(background, size: artworkSize, scale: 3)
+            // Posters show `primaryLogo` where other passes show `logo`.
+            for scale in 1...3 {
+                let suffix = scale == 1 ? "" : "@\(scale)x"
+                files["primaryLogo\(suffix).png"] = files["logo\(suffix).png"]
+            }
         }
         return files
     }
 
-    /// Shown in notifications and on the lock screen.
-    private static func icon(scale: CGFloat) -> Data {
-        let size = CGSize(width: 29, height: 29)
+    /// Shown in notifications and on the lock screen: the symbol on the pass color.
+    private static func icon(_ symbol: PassSymbol, color: RGBColor, scale: CGFloat) -> Data {
+        let size = CGSize(width: 38, height: 38)
         return render(size: size, scale: scale, opaque: true) { context in
-            let colors = [
-                UIColor(red: 0.54, green: 0.40, blue: 1.00, alpha: 1).cgColor,
-                UIColor(red: 0.29, green: 0.19, blue: 0.84, alpha: 1).cgColor,
-            ] as CFArray
-            if let gradient = CGGradient(colorsSpace: CGColorSpace(name: CGColorSpace.sRGB), colors: colors, locations: [0, 1]) {
-                context.drawLinearGradient(gradient, start: .zero, end: CGPoint(x: 0, y: size.height), options: [])
-            }
-            context.translateBy(x: size.width / 2, y: size.height / 2)
-            context.rotate(by: -0.2)
-            let glyph = CGRect(x: -10, y: -7, width: 20, height: 14)
-            context.addPath(TicketGlyph.path(in: glyph))
-            context.setFillColor(UIColor.white.cgColor)
+            context.setFillColor(color.cgColor)
+            context.fill(CGRect(origin: .zero, size: size))
+            let side: CGFloat = symbol == .ticket ? 26 : 20
+            context.addPath(symbol.path(in: CGRect(x: (size.width - side) / 2, y: (size.height - side) / 2, width: side, height: side)))
+            context.setFillColor(color.foreground.cgColor)
             context.fillPath()
         }
     }
 
     /// Shown at the top left of the pass, next to the logo text.
-    private static func logo(color: RGBColor, scale: CGFloat) -> Data {
-        let size = CGSize(width: 34, height: 26)
+    private static func logo(_ symbol: PassSymbol, color: RGBColor, scale: CGFloat) -> Data {
+        let glyph = symbol.logoSize
+        let size = CGSize(width: glyph.width + 2, height: 26)
         return render(size: size, scale: scale, opaque: false) { context in
-            context.addPath(TicketGlyph.path(in: CGRect(x: 1, y: 4, width: 32, height: 20), perforated: true))
-            context.setFillColor(UIColor(red: color.red, green: color.green, blue: color.blue, alpha: 1).cgColor)
+            context.addPath(symbol.path(in: CGRect(x: 1, y: (size.height - glyph.height) / 2, width: glyph.width, height: glyph.height)))
+            context.setFillColor(color.cgColor)
             context.fillPath()
+        }
+    }
+
+    /// The photo, filling `size` and cropped to it around its center.
+    private static func photo(_ background: PassBackground, size: CGSize, scale: CGFloat) -> Data {
+        render(size: size, scale: scale, opaque: true) { _ in
+            let image = background.image
+            let fill = max(size.width / CGFloat(image.width), size.height / CGFloat(image.height))
+            let drawn = CGSize(width: CGFloat(image.width) * fill, height: CGFloat(image.height) * fill)
+            UIImage(cgImage: image).draw(in: CGRect(
+                x: (size.width - drawn.width) / 2,
+                y: (size.height - drawn.height) / 2,
+                width: drawn.width,
+                height: drawn.height
+            ))
         }
     }
 
@@ -191,25 +246,8 @@ nonisolated enum PassArtwork {
     }
 }
 
-/// Tical's ticket: a rounded rectangle with a notch in each short side.
-nonisolated enum TicketGlyph {
-    static func path(in rect: CGRect, perforated: Bool = false) -> CGPath {
-        let corner = min(rect.width, rect.height) * 0.18
-        let notch = rect.height * 0.16
-        let outline = CGPath(roundedRect: rect, cornerWidth: corner, cornerHeight: corner, transform: nil)
-        let cutouts = CGMutablePath()
-        for x in [rect.minX, rect.maxX] {
-            cutouts.addEllipse(in: CGRect(x: x - notch, y: rect.midY - notch, width: notch * 2, height: notch * 2))
-        }
-        if perforated {
-            let holes = 5
-            let radius = rect.height * 0.045
-            let x = rect.minX + rect.width * 0.68
-            for index in 0..<holes {
-                let y = rect.minY + rect.height * (CGFloat(index) + 0.5) / CGFloat(holes)
-                cutouts.addEllipse(in: CGRect(x: x - radius, y: y - radius, width: radius * 2, height: radius * 2))
-            }
-        }
-        return outline.subtracting(cutouts)
+private extension RGBColor {
+    nonisolated var cgColor: CGColor {
+        CGColor(srgbRed: red, green: green, blue: blue, alpha: 1)
     }
 }

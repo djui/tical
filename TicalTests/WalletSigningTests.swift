@@ -1,3 +1,4 @@
+import CoreGraphics
 import CryptoKit
 import Foundation
 import Testing
@@ -223,5 +224,112 @@ struct PassBuilderTests {
         let signerInfo = try DER.parse(signature).children()[1].children()[0].children()[4].children()[0].children()
         let signedBytes = DER.tlv(DER.Tag.set, signerInfo[3].content)
         #expect(TestIdentity.verify(signerInfo[5].content, of: signedBytes, with: identity.certificate))
+    }
+
+    @Test func blurredBackgroundKeepsTheEventTicket() throws {
+        var content = self.content()
+        content.background = PassBackground(image: try Self.image(gray: 0.2), style: .blurred)
+        let pass = try passJSON(for: content)
+        #expect(pass["eventTicket"] != nil)
+        #expect(pass["posterGeneric"] == nil)
+
+        let files = PassArtwork.files(for: content)
+        #expect(files["background.png"] != nil)
+        #expect(files["background@2x.png"] != nil)
+        #expect(files["artwork@2x.png"] == nil)
+    }
+
+    @Test func posterBackgroundAddsThePosterStyle() throws {
+        var content = self.content()
+        content.background = PassBackground(image: try Self.image(gray: 0.2), style: .poster)
+        let pass = try passJSON(for: content)
+        // Devices without poster passes show the event ticket.
+        #expect(pass["eventTicket"] != nil)
+        let poster = try #require(pass["posterGeneric"] as? [String: Any])
+        #expect(Self.keys(poster["primaryFields"]) == ["event", "starts"])
+        #expect((poster["primaryFields"] as? [[String: Any]])?.first?["label"] as? String == "Event")
+        // Wallet shows one footer line; the rest goes under the pass.
+        #expect(Self.keys(poster["footerFields"]) == ["seat"])
+        #expect(Self.keys(poster["additionalInfoFields"]) == ["venue", "booking"])
+
+        let files = PassArtwork.files(for: content)
+        for name in ["artwork@2x.png", "artwork@3x.png", "background.png", "primaryLogo.png", "primaryLogo@3x.png"] {
+            #expect(files[name] != nil, "missing \(name)")
+        }
+    }
+
+    @Test func posterShowsTheVenueWhenTheTicketHasNoTime() throws {
+        var content = self.content()
+        content.draft.startTimeIsAssumed = true
+        content.background = PassBackground(image: try Self.image(gray: 0.2), style: .poster)
+        let poster = try #require(try passJSON(for: content)["posterGeneric"] as? [String: Any])
+        #expect(Self.keys(poster["primaryFields"]) == ["event", "venue"])
+        #expect(Self.keys(poster["footerFields"]) == ["seat"])
+        #expect(Self.keys(poster["additionalInfoFields"]) == ["booking"])
+    }
+
+    @Test func posterFooterFallsBackToTheVenue() throws {
+        var content = self.content()
+        content.draft.seatInfo = ""
+        content.background = PassBackground(image: try Self.image(gray: 0.2), style: .poster)
+        let poster = try #require(try passJSON(for: content)["posterGeneric"] as? [String: Any])
+        #expect(Self.keys(poster["footerFields"]) == ["venue"])
+        #expect(Self.keys(poster["additionalInfoFields"]) == ["booking"])
+    }
+
+    private static func keys(_ fields: Any?) -> [String] {
+        (fields as? [[String: Any]] ?? []).compactMap { $0["key"] as? String }
+    }
+
+    @Test func backgroundPhotoDecidesTheTextColor() throws {
+        #expect(PassBackground(image: try Self.image(gray: 0.95)).color.foreground == .darkText)
+        #expect(PassBackground(image: try Self.image(gray: 0.05)).color.foreground == .white)
+    }
+
+    @Test func symbolChangesTheLogo() {
+        var content = self.content()
+        let ticket = PassArtwork.files(for: content)["logo@2x.png"]
+        content.symbol = .music
+        let music = PassArtwork.files(for: content)["logo@2x.png"]
+        #expect(ticket != nil)
+        #expect(music != nil)
+        #expect(ticket != music)
+    }
+
+    private func passJSON(for content: PassContent) throws -> [String: Any] {
+        let identity = try TestIdentity.passType("pass.example.tickets", team: "ABCDE12345")
+        let signing = SigningCertificate(certificate: identity.certificate, intermediates: [])
+        let data = try PassBuilder.passJSON(for: content, signing: signing)
+        return try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+    }
+
+    /// A photo of one gray.
+    private static func image(gray: CGFloat) throws -> CGImage {
+        let context = try #require(CGContext(
+            data: nil,
+            width: 40,
+            height: 50,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpace(name: CGColorSpace.sRGB)!,
+            bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
+        ))
+        context.setFillColor(CGColor(gray: gray, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: 40, height: 50))
+        return try #require(context.makeImage())
+    }
+}
+
+struct PassSymbolTests {
+    @Test(arguments: PassSymbol.allCases)
+    func drawsInsideItsFrame(_ symbol: PassSymbol) {
+        let rect = CGRect(x: 10, y: 20, width: 64, height: 40)
+        let path = symbol.path(in: rect)
+        #expect(!path.isEmpty)
+        let bounds = path.boundingBoxOfPath
+        #expect(rect.insetBy(dx: -0.5, dy: -0.5).contains(bounds))
+        // As large as the frame allows: the full height, or the full width for the ticket.
+        #expect(bounds.height > rect.height * 0.8)
+        #expect(abs(bounds.midX - rect.midX) < rect.width * 0.05)
     }
 }
