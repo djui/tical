@@ -64,8 +64,11 @@ struct HomeView: View {
         }
         .onChange(of: photoItem) { _, item in
             guard let item else { return }
-            photoItem = nil
-            Task { await load(item) }
+            Task {
+                // Read before clearing: the embedded picker withdraws access to a photo once it's deselected.
+                await load(item)
+                if photoItem == item { photoItem = nil }
+            }
         }
         .dropDestination(for: TicketFile.self) { files, _ in
             guard let file = files.first else { return false }
@@ -204,11 +207,18 @@ struct HomeView: View {
 
     private func load(_ item: PhotosPickerItem) async {
         do {
-            guard let file = try await item.loadTransferable(type: TicketFile.self) else {
-                model.show(String(localized: "Couldn't Open Photo"), String(localized: "Tical couldn't read that photo."))
-                return
+            if let file = try await item.loadTransferable(type: TicketFile.self) {
+                model.open(file.input)
+            } else if let data = try await item.loadTransferable(type: Data.self) {
+                // Some photos on a device don't offer a type TicketFile names; take the raw bytes.
+                model.open(ImportInput(data: data, contentType: item.supportedContentTypes.first))
+            } else {
+                var message = String(localized: "Tical couldn't read that photo.")
+                #if DEBUG
+                message += " (\(item.supportedContentTypes.map(\.identifier).joined(separator: ", ")))"
+                #endif
+                model.show(String(localized: "Couldn't Open Photo"), message)
             }
-            model.open(file.input)
         } catch {
             model.show(String(localized: "Couldn't Open Photo"), error.localizedDescription)
         }
