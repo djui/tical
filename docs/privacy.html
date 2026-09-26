@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Privacy Policy · Tical</title>
-  <meta name="description" content="Tical doesn't collect any data. Your tickets are read on your device and never leave it.">
+  <meta name="description" content="Tical doesn't collect personal data. Your tickets are read on your device and never leave it.">
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#0b0b10" media="(prefers-color-scheme: dark)">
@@ -33,12 +33,12 @@
 
   <main id="main" class="wrap doc">
     <h1>Privacy Policy</h1>
-    <p class="fine">Effective 26 September 2026</p>
+    <p class="fine">Effective 27 September 2026</p>
 
-    <p class="summary">Tical doesn't collect any data. Your tickets are read on your device, and nothing you give Tical is sent to the developer or anyone else.</p>
+    <p class="summary">Tical doesn't collect personal data. Your tickets are read on your device, and their details are never sent to the developer or anyone else. To sign a Wallet pass, Tical sends only a fingerprint of the pass to its signing server.</p>
 
     <h2>What Tical collects</h2>
-    <p>Nothing. Tical has no accounts, no analytics, no advertising, and no tracking. It has no server, and it doesn't send your tickets, their details, or anything about you to the developer or to third parties.</p>
+    <p>No personal data. Tical has no accounts, no analytics, no advertising, and no tracking. It doesn't send your tickets, their details, or anything about you to the developer or to third parties. The only thing it sends is what the signing server needs to sign a Wallet pass, described below.</p>
     <p>If you've chosen to share analytics with app developers in your device's settings, Apple may share anonymous crash reports with the developer. That's an Apple feature you control in Settings; Tical itself contains no analytics code.</p>
 
     <h2>How Tical reads your tickets</h2>
@@ -52,8 +52,18 @@
     <p>Tical doesn't ask for access to your calendar and can't read your events. It fills in Calendar's own event editor, and iOS saves the event when you tap Add.</p>
 
     <h2>Apple Wallet passes</h2>
-    <p>Tical builds and signs passes on your device. The passes it makes don't contact any server.</p>
-    <p>If you set up Wallet passes, Tical stores your Pass Type ID certificate and its private key in your device's keychain, marked to stay on this device: they don't sync to iCloud Keychain and can't be restored onto another device. You can remove them at any time in Tical under Settings &rsaquo; Wallet Passes &rsaquo; Remove Certificate.</p>
+    <p>Wallet only accepts passes signed with a certificate from Apple. Tical builds each pass on your device, then has Tical's signing server sign it. For each pass, it sends the server:</p>
+    <ul>
+      <li>the SHA-256 fingerprint of the pass's file list. It's a hash of hashes, and can't be turned back into the ticket or its details;</li>
+      <li>an App Attest key identifier and an assertion. Apple's App Attest service creates these on your device to prove the request comes from Tical on a real device. The key is random and belongs only to this installation of Tical.</li>
+    </ul>
+    <p>The server returns the pass's signature. It never receives the event, date, venue, seat, booking number, code, or image.</p>
+    <p>To prevent abuse of Tical's certificate, the server keeps each App Attest key's public key, Apple's attestation receipt for it, and a counter, and deletes a key when it hasn't been used for about 13 months. It counts how many passes each key signs per day, and deletes those counts after two days. It doesn't store IP addresses or the fingerprints it signs.</p>
+    <p>The server runs on Cloudflare, with its data stored in Western Europe. To deliver each request, Cloudflare processes your device's IP address and keeps short-lived operational logs, as described in <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare's privacy policy</a>.</p>
+
+    <h2>Your own certificate</h2>
+    <p>If you're in the Apple Developer Program, you can have Tical sign passes with your own Pass Type ID certificate instead. Tical then signs on your device and doesn't contact its server.</p>
+    <p>Tical stores your certificate and its private key in your device's keychain, marked to stay on this device: they don't sync to iCloud Keychain and can't be restored onto another device. You can remove them at any time in Tical under Settings &rsaquo; Wallet Passes &rsaquo; Remove Certificate.</p>
     <p>When you import a certificate file that doesn't include Apple's intermediate certificate, iOS downloads that public certificate from the address listed in your certificate. No ticket or personal data is sent.</p>
 
     <h2>Settings</h2>
@@ -63,7 +73,7 @@
     <p>Links to Apple's developer website open in your browser, where Apple's privacy policy applies.</p>
 
     <h2>Children</h2>
-    <p>Tical doesn't collect data from anyone, including children.</p>
+    <p>Tical doesn't collect personal data from anyone, including children.</p>
 
     <h2>Changes</h2>
     <p>If this policy changes, the new version will be posted on this page with a new effective date.</p>

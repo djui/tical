@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Tical: tickets to Calendar and Apple Wallet</title>
-  <meta name="description" content="Tical turns a ticket screenshot or PDF into a calendar event and an Apple Wallet pass. It reads your ticket on your iPhone, and nothing is uploaded.">
+  <meta name="description" content="Tical turns a ticket screenshot or PDF into a calendar event and an Apple Wallet pass. It reads your ticket on your iPhone and never uploads it.">
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#0b0b10" media="(prefers-color-scheme: dark)">
@@ -54,12 +54,12 @@
           </picture>
           <p class="eyebrow">For iPhone and iPad</p>
           <h1>Tickets, sorted.</h1>
-          <p class="lead">Turn a ticket screenshot or PDF into a calendar event and an Apple&nbsp;Wallet pass. Tical reads it on your iPhone, and nothing is uploaded.</p>
+          <p class="lead">Turn a ticket screenshot or PDF into a calendar event and an Apple&nbsp;Wallet pass. Tical reads it on your iPhone and never uploads it.</p>
           <div class="actions">
             <span class="button button-primary" role="link" aria-disabled="true">Coming soon to the App Store</span>
             <a class="button button-quiet" href="#how">See how it works</a>
           </div>
-          <p class="fine">Requires iOS&nbsp;27. Apple&nbsp;Wallet passes need an Apple Developer Program membership.</p>
+          <p class="fine">Requires iOS&nbsp;27.</p>
         </div>
 
         <div class="hero-visual">
@@ -180,17 +180,17 @@
       <div class="wrap split">
         <div class="split-copy">
           <p class="eyebrow">Apple Wallet</p>
-          <h2>Real passes, signed on your iPhone.</h2>
-          <p class="lead">Tical builds each pass with the ticket's details, its code, and a color from the ticket. Then it signs the pass so Wallet accepts it, right on your iPhone.</p>
-          <p class="note"><strong>Wallet only accepts passes signed with a Pass Type ID certificate from Apple,</strong> which needs an Apple Developer Program membership. Set it up once in Tical's settings. Not a developer? Adding to Calendar works for everyone.</p>
+          <h2>Real passes, ready for Wallet.</h2>
+          <p class="lead">Tical builds each pass on your iPhone, with the ticket's details, its code, and a color from the ticket. Wallet only accepts signed passes, so Tical's server signs it, without ever seeing your ticket.</p>
+          <p class="note"><strong>Only a fingerprint leaves your iPhone:</strong> a short hash of the pass's files, which can't be turned back into the ticket. Apple's App Attest proves the request comes from Tical on a real device.</p>
           <ol class="checklist">
-            <li>Tical creates a signing key on your iPhone and a request for Apple.</li>
-            <li>Make a Pass Type ID certificate for it in your developer account.</li>
-            <li>Import the certificate. The key never leaves your iPhone's keychain.</li>
+            <li>Tical builds the pass, code included, on your iPhone.</li>
+            <li>Its fingerprint goes to Tical's server, which signs it.</li>
+            <li>Add it to Apple Wallet, next to your other tickets.</li>
           </ol>
         </div>
         <figure class="device">
-          <img src="assets/wallet-setup.webp" alt="Tical's Wallet Passes settings, explaining the certificate and the three setup steps." width="720" height="1565" loading="lazy">
+          <img src="assets/wallet-pass.webp" alt="A Wallet pass made by Tical for The Midnight Owls at Uber Arena, Berlin, with the date, start time, seat, booking code, and QR code." width="720" height="1565" loading="lazy">
         </figure>
       </div>
     </section>
@@ -200,7 +200,7 @@
         <div class="section-head">
           <p class="eyebrow">Privacy</p>
           <h2>Your tickets stay on your iPhone.</h2>
-          <p class="lead">Tical doesn't collect anything. There's no server to send your tickets to.</p>
+          <p class="lead">Tical doesn't collect personal data, and your tickets never leave your iPhone.</p>
         </div>
         <div class="privacy-grid">
           <div class="privacy-item">
@@ -220,8 +220,8 @@
           </div>
           <div class="privacy-item">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M11 12l8-8M16 7l2.5 2.5M14 9l2 2"/></svg>
-            <h3>Your key stays put</h3>
-            <p>The Wallet signing key lives in your iPhone's keychain. It never syncs to iCloud or moves to another device.</p>
+            <h3>Signed without your ticket</h3>
+            <p>To sign a Wallet pass, Tical sends only its fingerprint. The server never sees the event, the seat, or the code.</p>
           </div>
         </div>
         <p style="margin-top: 36px"><a href="privacy.html">Read the privacy policy &rarr;</a></p>
@@ -237,12 +237,11 @@
         <div class="faq">
           <details>
             <summary>Does Tical upload my tickets?</summary>
-            <p>No. Tical reads tickets with Vision and Apple Intelligence on your iPhone, and it has no server to upload to.</p>
+            <p>No. Tical reads tickets with Vision and Apple Intelligence on your iPhone. To sign a Wallet pass, it sends Tical's server only a fingerprint of the pass, never the ticket or its details.</p>
           </details>
           <details>
-            <summary>Why do Wallet passes need an Apple Developer account?</summary>
-            <p>Apple Wallet only accepts passes signed with a Pass Type ID certificate, and Apple issues those only to members of the Apple Developer Program. Tical does the signing itself, on your iPhone, with your certificate.</p>
-            <p>Without a certificate, you can still add every ticket to Calendar.</p>
+            <summary>Can I sign passes with my own certificate?</summary>
+            <p>Yes, if you're in the Apple Developer Program. Set up a Pass Type ID certificate in Settings &rsaquo; Wallet Passes &rsaquo; Use Your Own Certificate. Tical then signs every pass on your iPhone and doesn't contact its server. The key stays in your iPhone's keychain.</p>
           </details>
           <details>
             <summary>Will the pass work at the entrance?</summary>
