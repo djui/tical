@@ -48,7 +48,8 @@ nonisolated enum TicketPageLoader {
 
     // MARK: - Images
 
-    private static func image(from data: Data) -> CGImage? {
+    /// The image upright, at most `maxPixelSize` on its long side, with transparency on white.
+    static func image(from data: Data, maxPixelSize: Int = maxPixelSize) -> CGImage? {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
         let options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,

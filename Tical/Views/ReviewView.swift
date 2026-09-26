@@ -1,5 +1,6 @@
 import EventKit
 import PassKit
+import PhotosUI
 import SwiftUI
 
 struct ReviewView: View {
@@ -12,6 +13,7 @@ struct ReviewView: View {
     @State private var showingWalletSetup = false
     @State private var showingOriginal = false
     @State private var copiedCode = false
+    @State private var backgroundItem: PhotosPickerItem?
     @State private var formWidth: CGFloat = 0
     @Environment(\.openURL) private var openURL
     @Environment(\.colorScheme) private var colorScheme
@@ -81,7 +83,9 @@ struct ReviewView: View {
             Section {
                 TicketCardView(
                     draft: ticket.draft,
-                    color: ticket.passColor,
+                    color: ticket.effectivePassColor,
+                    symbol: ticket.passSymbol,
+                    background: ticket.background,
                     codeImage: ticket.codeImage,
                     codeCaption: codeCaption
                 )
@@ -120,7 +124,11 @@ struct ReviewView: View {
             }
 
             codeSection
-            colorSection
+            if ticket.background == nil {
+                colorSection
+            }
+            backgroundSection
+            symbolSection
 
             if let method = ticket.method {
                 Section {
@@ -256,6 +264,99 @@ struct ReviewView: View {
         }
     }
 
+    private var backgroundSection: some View {
+        Section {
+            if let background = ticket.background {
+                HStack(spacing: 12) {
+                    Image(decorative: background.image, scale: 1)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 44, height: 44)
+                        .clipShape(.rect(cornerRadius: 8))
+                    Picker("Style", selection: backgroundStyle) {
+                        ForEach(PassBackground.Style.allCases) { style in
+                            Text(style.title).tag(style)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                }
+                PhotosPicker(selection: $backgroundItem, matching: .images, preferredItemEncoding: .current) {
+                    Label("Choose Another Photo", systemImage: "photo.on.rectangle")
+                }
+                Button("Remove Photo", systemImage: "trash", role: .destructive) {
+                    withAnimation(.smooth) {
+                        ticket.background = nil
+                    }
+                }
+            } else {
+                PhotosPicker(selection: $backgroundItem, matching: .images, preferredItemEncoding: .current) {
+                    Label("Choose Photo", systemImage: "photo")
+                }
+            }
+        } header: {
+            Text("Background")
+        } footer: {
+            switch ticket.background?.style {
+            case nil:
+                Text("A photo behind the details, in place of the pass color.")
+            case .blurred:
+                Text("Wallet blurs the photo behind the details. The text color follows the photo.")
+            case .poster:
+                Text("The photo stays sharp, with the code on top. Wallet shows the pass as a poster rather than an event ticket; older devices show it blurred.")
+            }
+        }
+        .onChange(of: backgroundItem) { _, item in
+            guard let item else { return }
+            backgroundItem = nil
+            Task { await loadBackground(item) }
+        }
+    }
+
+    private var backgroundStyle: Binding<PassBackground.Style> {
+        Binding {
+            ticket.background?.style ?? .blurred
+        } set: { style in
+            withAnimation(.smooth) {
+                ticket.background?.style = style
+            }
+        }
+    }
+
+    private var symbolSection: some View {
+        Section {
+            ScrollView(.horizontal) {
+                HStack(spacing: 14) {
+                    ForEach(PassSymbol.allCases) { symbol in
+                        let color = ticket.effectivePassColor
+                        Button {
+                            ticket.passSymbol = symbol
+                        } label: {
+                            PassSymbolShape(symbol: symbol)
+                                .fill(Color(color.foreground))
+                                .frame(width: 20, height: 20)
+                                .frame(width: 34, height: 34)
+                                .background(Color(color).gradient, in: .circle)
+                                .padding(3)
+                                .overlay {
+                                    Circle().strokeBorder(symbol == ticket.passSymbol ? Color(color) : .clear, lineWidth: 2)
+                                }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(Text(symbol.title))
+                        .accessibilityAddTraits(symbol == ticket.passSymbol ? .isSelected : [])
+                    }
+                }
+                .padding(.vertical, 6)
+            }
+            .scrollIndicators(.hidden)
+        } header: {
+            Text("Pass Icon")
+        } footer: {
+            Text("Shown on the pass and in its notifications.")
+        }
+    }
+
     // MARK: - Actions
 
     private var actionBar: some View {
@@ -320,6 +421,17 @@ struct ReviewView: View {
     }
 
     private static let canAddPasses = PKAddPassesViewController.canAddPasses()
+
+    private func loadBackground(_ item: PhotosPickerItem) async {
+        do {
+            guard let data = try await item.loadTransferable(type: Data.self), await ticket.setBackground(data) else {
+                model.show(String(localized: "Couldn't Open Photo"), String(localized: "Tical couldn't read that photo."))
+                return
+            }
+        } catch {
+            model.show(String(localized: "Couldn't Open Photo"), error.localizedDescription)
+        }
+    }
 
     private func addToCalendar() {
         let store = EKEventStore()
