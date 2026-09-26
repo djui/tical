@@ -181,19 +181,19 @@ final class TicketImport: Identifiable, Hashable {
         PassBackground(data: data, style: style)
     }
 
-    /// Builds and signs the pass on this iPhone.
+    /// Builds the pass on this iPhone, and has it signed.
     func makePass(signing: PassSigningStore) async throws -> PKPass {
-        let credentials = try signing.credentials()
-        let data = try await Self.buildPass(passContent, credentials: credentials)
+        let signer = try await signing.signer()
+        let data = try await Self.buildPass(passContent, signer: signer)
         do {
             return try PKPass(data: data)
         } catch {
-            throw PassError(message: PKPass.explanation(for: error))
+            throw PassError(message: PKPass.explanation(for: error, ownCertificate: signing.usesOwnCertificate))
         }
     }
 
     @concurrent
-    private nonisolated static func buildPass(_ content: PassContent, credentials: PassCredentials) async throws -> Data {
-        try PassBuilder.archive(for: content, credentials: credentials)
+    private nonisolated static func buildPass(_ content: PassContent, signer: PassSigner) async throws -> Data {
+        try await PassBuilder.archive(for: content, signer: signer)
     }
 }

@@ -407,6 +407,14 @@ struct ReviewView: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
                         .disabled(isBuildingPass)
+                        .overlay(alignment: .trailing) {
+                            // Signing on Tical's server takes a moment.
+                            if isBuildingPass {
+                                ProgressView()
+                                    .tint(.white)
+                                    .padding(.trailing, 14)
+                            }
+                        }
                     }
                 }
             }

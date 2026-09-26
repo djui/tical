@@ -36,7 +36,8 @@ nonisolated struct PassCredentials: @unchecked Sendable {
     let signing: SigningCertificate
 }
 
-/// Sets up and keeps the pass signing identity. The private key is created on this iPhone
+/// Decides how passes are signed: with your own Pass Type ID certificate when you've set one
+/// up, otherwise by Tical's signing server. Your own private key is created on this iPhone
 /// (or imported from a .p12 file) and never leaves the keychain.
 @MainActor
 @Observable
@@ -70,11 +71,19 @@ final class PassSigningStore {
         }
     }
 
+    /// Your own certificate, which Tical signs with instead of its server.
     private(set) var certificate: SigningCertificate?
     private(set) var pendingRequest: PendingSigningRequest?
+    /// Tical's signing server, when this build has one.
+    let service = PassSigningService.configuredURL.map { PassSigningService(baseURL: $0) }
+
+    var usesOwnCertificate: Bool { certificate != nil }
 
     /// True when passes can be signed right now.
-    var isReady: Bool { certificate.map { !$0.isExpired } ?? false }
+    var isReady: Bool {
+        if let certificate { return !certificate.isExpired }
+        return service != nil
+    }
 
     private enum Storage {
         static let certificate = "certificate"
@@ -192,6 +201,13 @@ final class PassSigningStore {
         Keychain.deleteData(for: Storage.pendingRequest)
         Keychain.deleteKey(tag: Storage.pendingKey)
         reload()
+    }
+
+    /// Your own certificate when there is one, otherwise Tical's server.
+    func signer() async throws -> PassSigner {
+        if certificate != nil { return .certificate(try credentials()) }
+        guard let service else { throw SetupError.notConfigured }
+        return try await .service(service)
     }
 
     func credentials() throws -> PassCredentials {

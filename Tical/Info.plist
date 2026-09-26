@@ -13,5 +13,12 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>TicalSigningServiceURL</key>
+	<string>$(TICAL_SIGNING_SERVICE_URL)</string>
 </dict>
 </plist>

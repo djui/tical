@@ -156,9 +156,8 @@ struct PassBuilderTests {
     }
 
     @Test func writesPassJSON() throws {
-        let identity = try TestIdentity.passType("pass.example.tickets", team: "ABCDE12345")
-        let signing = SigningCertificate(certificate: identity.certificate, intermediates: [])
-        let data = try PassBuilder.passJSON(for: content(), signing: signing)
+        let passType = PassType(passTypeIdentifier: "pass.example.tickets", teamIdentifier: "ABCDE12345")
+        let data = try PassBuilder.passJSON(for: content(), passType: passType)
         let pass = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         #expect(pass["formatVersion"] as? Int == 1)
         #expect(pass["passTypeIdentifier"] as? String == "pass.example.tickets")
@@ -191,22 +190,21 @@ struct PassBuilderTests {
     @Test func leavesOutAnAssumedStartTime() throws {
         var dateOnly = content()
         dateOnly.draft.startTimeIsAssumed = true
-        let identity = try TestIdentity.passType()
-        let signing = SigningCertificate(certificate: identity.certificate, intermediates: [])
-        let data = try PassBuilder.passJSON(for: dateOnly, signing: signing)
+        let passType = PassType(passTypeIdentifier: "pass.example.tickets", teamIdentifier: "ABCDE12345")
+        let data = try PassBuilder.passJSON(for: dateOnly, passType: passType)
         let pass = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         let ticket = try #require(pass["eventTicket"] as? [String: Any])
         #expect((ticket["headerFields"] as? [[String: Any]])?.first?["key"] as? String == "date")
         #expect((ticket["secondaryFields"] as? [[String: Any]])?.compactMap { $0["key"] as? String } == ["venue"])
     }
 
-    @Test func buildsSignedArchive() throws {
+    @Test func buildsSignedArchive() async throws {
         let identity = try TestIdentity.passType()
         let credentials = PassCredentials(
             privateKey: identity.key,
             signing: SigningCertificate(certificate: identity.certificate, intermediates: [])
         )
-        let archive = try PassBuilder.archive(for: content(), credentials: credentials)
+        let archive = try await PassBuilder.archive(for: content(), signer: .certificate(credentials))
         let files = StoredZip.entries(of: archive)
         for name in ["pass.json", "manifest.json", "signature", "icon.png", "icon@2x.png", "icon@3x.png", "logo.png", "logo@2x.png", "logo@3x.png"] {
             #expect(files[name] != nil, "missing \(name)")
@@ -297,9 +295,8 @@ struct PassBuilderTests {
     }
 
     private func passJSON(for content: PassContent) throws -> [String: Any] {
-        let identity = try TestIdentity.passType("pass.example.tickets", team: "ABCDE12345")
-        let signing = SigningCertificate(certificate: identity.certificate, intermediates: [])
-        let data = try PassBuilder.passJSON(for: content, signing: signing)
+        let passType = PassType(passTypeIdentifier: "pass.example.tickets", teamIdentifier: "ABCDE12345")
+        let data = try PassBuilder.passJSON(for: content, passType: passType)
         return try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
     }
 

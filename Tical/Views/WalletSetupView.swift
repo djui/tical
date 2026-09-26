@@ -1,9 +1,12 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Guides you through making a Pass Type ID certificate, so Tical can sign Wallet passes.
+/// How Tical signs Wallet passes: by its server, or with your own Pass Type ID certificate,
+/// which this screen guides you through making.
 struct WalletSetupView: View {
     @Bindable var store: PassSigningStore
+    /// Shows the certificate setup even though Tical's server could sign instead.
+    var setsUpOwnCertificate = false
 
     private enum ImportKind {
         case certificate
@@ -24,13 +27,15 @@ struct WalletSetupView: View {
         Form {
             if let certificate = store.certificate {
                 readyContent(certificate)
+            } else if store.service != nil && !setsUpOwnCertificate {
+                serviceContent
             } else {
                 introSection
                 stepsSection
                 pkcs12Section
             }
         }
-        .navigationTitle("Wallet Passes")
+        .navigationTitle(setsUpOwnCertificate ? "Your Certificate" : "Wallet Passes")
         .navigationBarTitleDisplayMode(.inline)
         .disabled(isWorking)
         .overlay {
@@ -65,7 +70,11 @@ struct WalletSetupView: View {
         .confirmationDialog("Remove the certificate?", isPresented: $confirmingRemoval, titleVisibility: .visible) {
             Button("Remove Certificate", role: .destructive) { store.removeCertificate() }
         } message: {
-            Text("Tical deletes the certificate and its private key from this \(Device.name). Passes already in Wallet stay there.")
+            if store.service == nil {
+                Text("Tical deletes the certificate and its private key from this \(Device.name). Passes already in Wallet stay there.")
+            } else {
+                Text("Tical deletes the certificate and its private key from this \(Device.name), and its server signs passes again. Passes already in Wallet stay there.")
+            }
         }
         .onChange(of: store.pendingRequest, initial: true) { _, request in
             requestFile = request?.writeFile()
@@ -73,6 +82,33 @@ struct WalletSetupView: View {
         .sensoryFeedback(.success, trigger: store.isReady) { _, ready in ready }
         .animation(.smooth, value: store.certificate)
         .animation(.smooth, value: store.pendingRequest)
+    }
+
+    // MARK: - Tical's Server
+
+    @ViewBuilder
+    private var serviceContent: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 10) {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.largeTitle)
+                    .foregroundStyle(.green)
+                    .accessibilityHidden(true)
+                Text("Tical signs your passes")
+                    .font(.headline)
+                Text("Wallet only accepts signed passes. When you add one, Tical sends a fingerprint of the pass to its server, which signs it. The ticket's details stay on this \(Device.name).")
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 6)
+        }
+
+        Section {
+            NavigationLink("Use Your Own Certificate") {
+                WalletSetupView(store: store, setsUpOwnCertificate: true)
+            }
+        } footer: {
+            Text("If you're in the Apple Developer Program, passes can be signed on this \(Device.name) with your own Pass Type ID certificate instead.")
+        }
     }
 
     // MARK: - Setup

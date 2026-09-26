@@ -12,18 +12,17 @@ nonisolated struct PassContent: Sendable {
     var serialNumber = UUID().uuidString
 }
 
-/// Builds and signs an event ticket pass on this iPhone.
+/// Builds an event ticket pass on this iPhone, and has it signed.
 nonisolated enum PassBuilder {
-    static func archive(for content: PassContent, credentials: PassCredentials) throws -> Data {
+    static func archive(for content: PassContent, signer: PassSigner) async throws -> Data {
         var files = PassArtwork.files(for: content)
-        files["pass.json"] = try passJSON(for: content, signing: credentials.signing)
-        return try PassPackage(files: files).signedArchive(
-            signer: credentials.signing.certificate,
-            intermediates: credentials.signing.intermediates
-        ) { try Keychain.sign($0, with: credentials.privateKey) }
+        files["pass.json"] = try passJSON(for: content, passType: signer.passType)
+        let package = PassPackage(files: files)
+        let manifest = try package.manifest()
+        return package.archive(manifest: manifest, signature: try await signer.sign(manifest))
     }
 
-    static func passJSON(for content: PassContent, signing: SigningCertificate) throws -> Data {
+    static func passJSON(for content: PassContent, passType: PassType) throws -> Data {
         let draft = content.draft
         let title = draft.displayTitle
         let location = draft.location.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -34,8 +33,8 @@ nonisolated enum PassBuilder {
 
         var pass: [String: Any] = [
             "formatVersion": 1,
-            "passTypeIdentifier": signing.passTypeIdentifier,
-            "teamIdentifier": signing.teamIdentifier,
+            "passTypeIdentifier": passType.passTypeIdentifier,
+            "teamIdentifier": passType.teamIdentifier,
             "serialNumber": content.serialNumber,
             "organizationName": organizer.isEmpty ? "Tical" : organizer,
             "description": String(localized: "Ticket for \(title)"),

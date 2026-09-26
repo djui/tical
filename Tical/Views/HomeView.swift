@@ -168,14 +168,14 @@ struct HomeView: View {
                 title: "Share from any app",
                 message: "In Photos, Files, Mail, or Safari, tap Share and choose Tical."
             )
-            if model.signing.isReady {
+            if model.signing.usesOwnCertificate && model.signing.isReady {
                 TipCard(
                     symbol: "wallet.pass.fill",
                     tint: .green,
                     title: "Wallet passes are on",
                     message: "Tical signs passes with your certificate, on this \(Device.name)."
                 )
-            } else {
+            } else if !model.signing.isReady {
                 Button {
                     showingWalletSetup = true
                 } label: {

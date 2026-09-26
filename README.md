@@ -24,13 +24,21 @@ xcodebuild test -project Tical.xcodeproj -scheme Tical -destination 'platform=iO
 3. Apple Intelligence reads the ticket image and its text into fields. If the model isn't available, doesn't answer within 20 seconds, or fails, the local parser (English and German labels, `NSDataDetector`) fills them in. Codes the model reports are only kept if they're printed on the ticket.
 4. The review screen shows the pass as Wallet will show it, in a color taken from the ticket. Every field can be edited, and you can pick another color, an icon for the kind of event, and a background photo.
 5. **Calendar** opens the system event editor, filled in. The editor runs outside Tical, so Tical needs no calendar access and never sees your other events.
-6. **Add to Apple Wallet** (Apple's own badge) builds and signs the pass on the device and shows the system sheet to add it. Tical redraws the code and reads it back before offering it, and says so when it can't confirm a match.
+6. **Add to Apple Wallet** (Apple's own badge) builds the pass on the device, has it signed, and shows the system sheet to add it. Tical redraws the code and reads it back before offering it, and says so when it can't confirm a match.
 
 ## Wallet passes
 
-Wallet only accepts passes signed with a **Pass Type ID certificate** from Apple, which needs an Apple Developer Program membership. Tical does the signing itself, on the iPhone: it builds the `.pkpass`, hashes its files into `manifest.json`, and signs that with a CMS signature (SHA-256, RSA) that includes Apple's WWDR intermediate certificate.
+Wallet only accepts passes signed with a **Pass Type ID certificate** from Apple. Tical builds the `.pkpass` on the device and hashes its files into `manifest.json`. A CMS signature over the manifest (SHA-256, RSA, with Apple's WWDR intermediate certificate) makes it a pass Wallet accepts. Tical signs in one of two ways.
 
-Set it up once in **Settings ▸ Wallet Passes**:
+### Tical's signing server
+
+By default, Tical's server signs with Tical's own certificate, so Wallet works without a developer account. The app sends only the SHA-256 digest of `manifest.json`, which lists file hashes, not ticket details, and gets back the `signature` file. [App Attest](https://developer.apple.com/documentation/devicecheck/establishing-your-app-s-integrity) proves each request comes from Tical on a real device, and the server limits how many passes each device signs per day.
+
+The server is a Cloudflare Worker in [`server/`](server/README.md). Set its URL as `TICAL_SIGNING_SERVICE_URL` in the Tical target's build settings. While that's empty, passes need your own certificate. For development, the `-TicalSigningServiceURL` launch argument overrides it.
+
+### Your own certificate
+
+With an Apple Developer Program membership, you can sign on the device with your own certificate instead: **Settings ▸ Wallet Passes ▸ Use Your Own Certificate**. Once it's set up, Tical uses it for every pass and doesn't contact the server.
 
 1. **Create Request.** Tical makes an RSA key in the iPhone's keychain and a certificate signing request for it. The key never leaves the device: it doesn't sync to iCloud Keychain and can't be restored onto another device.
 2. In the Apple Developer account, register a Pass Type ID, create a **Pass Type ID certificate** for it, and upload the request.
@@ -67,7 +75,7 @@ Share extensions can't open URLs through `NSExtensionContext`, so the extension 
 
 Tical asks for no permissions. The Photos picker (including the recent screenshots row), the Files picker, the paste button, and the Calendar editor all run outside the app. The first time the screenshots row appears, iOS explains once that Tical only receives the photo you tap.
 
-Tickets are read on the device and never uploaded. The only network access is iOS fetching Apple's public intermediate certificate during Wallet setup, when the certificate file doesn't include it. The privacy manifest declares user defaults (the two settings below) and file timestamps (picking the newest shared file).
+Tickets are read on the device and never uploaded. When Tical's server signs a pass, the app sends it the manifest's SHA-256 digest, an App Attest key ID, and an assertion. With your own certificate, the only network access is iOS fetching Apple's public intermediate certificate during setup, when the certificate file doesn't include it. The privacy manifest declares user defaults (the two settings below) and file timestamps (picking the newest shared file).
 
 ## Settings
 
@@ -86,6 +94,7 @@ Tickets are read on the device and never uploaded. The only network access is iO
   xcrun simctl openurl booted tical://import
   ```
 
+- The simulator can't use App Attest, so debug builds there ask the server to sign without it, which only a local development server allows. [`server/README.md`](server/README.md) shows how to run one.
 - To try the Wallet flow without an Apple certificate, make a test CA with OpenSSL, issue a certificate for the request from **Create Request** with the subject `/UID=pass.example/CN=Pass Type ID: pass.example/OU=TEAMID/O=Example/C=US`, and import it as a PEM file that includes the test intermediate. Tical signs passes with it, and `openssl cms -verify` accepts them against the test root. Wallet itself rejects them, since only Apple's CA is trusted.
 
 ## Website
@@ -106,6 +115,7 @@ The screenshots come from the iPhone 18 Pro simulator with the status bar set to
 
 - `Import/`: files from pickers and the share extension; PDF pages and image decoding.
 - `Scanning/`: Vision, the language model, the local parser, and the pass color.
-- `Wallet/`: pass building and signing (DER, X.509, CMS, PKCS #10, ZIP), the pass symbols and background photo, the keychain, and certificate setup.
+- `Wallet/`: pass building and signing (DER, X.509, CMS, PKCS #10, ZIP), the pass symbols and background photo, the signing server's client, the keychain, and certificate setup.
 - `Calendar/`: the event and the system editor.
 - `Views/`: SwiftUI screens.
+- `server/`: the signing server, a Cloudflare Worker.

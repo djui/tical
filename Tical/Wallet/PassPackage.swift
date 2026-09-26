@@ -14,18 +14,8 @@ nonisolated struct PassPackage {
         return try JSONSerialization.data(withJSONObject: hashes, options: [.sortedKeys, .prettyPrinted])
     }
 
-    func signedArchive(
-        signer: X509Certificate,
-        intermediates: [X509Certificate],
-        sign: (Data) throws -> Data
-    ) throws -> Data {
-        let manifest = try manifest()
-        let signature = try CMSSignature.detached(
-            content: manifest,
-            signer: signer,
-            intermediates: intermediates,
-            sign: sign
-        )
+    /// The `.pkpass` archive: every file, the manifest, and the manifest's signature.
+    func archive(manifest: Data, signature: Data) -> Data {
         var entries = files.keys.sorted().map { ZipArchive.Entry(name: $0, data: files[$0] ?? Data()) }
         entries.append(ZipArchive.Entry(name: "manifest.json", data: manifest))
         entries.append(ZipArchive.Entry(name: "signature", data: signature))

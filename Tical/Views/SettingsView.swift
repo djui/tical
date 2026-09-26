@@ -23,7 +23,11 @@ struct SettingsView: View {
                         }
                     }
                 } footer: {
-                    Text("Tical signs passes on this \(Device.name) with your Pass Type ID certificate.")
+                    if model.signing.usesOwnCertificate || model.signing.service == nil {
+                        Text("Tical signs passes on this \(Device.name) with your Pass Type ID certificate.")
+                    } else {
+                        Text("Tical's server signs your passes. It only receives a fingerprint of each pass, never the ticket.")
+                    }
                 }
 
                 Section {
@@ -42,7 +46,11 @@ struct SettingsView: View {
 
                 Section("Privacy") {
                     Label {
-                        Text("Tical reads tickets with Vision and Apple Intelligence on this \(Device.name). Nothing is uploaded, and Tical doesn't read your calendar.")
+                        if model.signing.service == nil {
+                            Text("Tical reads tickets with Vision and Apple Intelligence on this \(Device.name). Nothing is uploaded, and Tical doesn't read your calendar.")
+                        } else {
+                            Text("Tical reads tickets with Vision and Apple Intelligence on this \(Device.name) and never uploads them. To sign a Wallet pass, it sends only a fingerprint of the pass. Tical doesn't read your calendar.")
+                        }
                     } icon: {
                         Image(systemName: "lock.shield")
                     }
@@ -65,8 +73,9 @@ struct SettingsView: View {
 
     private var walletStatus: String {
         if let certificate = model.signing.certificate {
-            return certificate.isExpired ? String(localized: "Expired") : String(localized: "On")
+            return certificate.isExpired ? String(localized: "Expired") : String(localized: "Your Certificate")
         }
+        if model.signing.service != nil { return String(localized: "On") }
         return model.signing.pendingRequest == nil ? String(localized: "Off") : String(localized: "Waiting")
     }
 

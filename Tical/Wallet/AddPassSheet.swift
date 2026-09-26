@@ -35,14 +35,16 @@ struct AddPassSheet: UIViewControllerRepresentable {
 
 extension PKPass {
     /// A readable reason when Wallet rejects a pass Tical built.
-    static func explanation(for error: Error) -> String {
+    static func explanation(for error: Error, ownCertificate: Bool) -> String {
         if let passError = error as? PKPassKitError {
             switch passError.code {
-            case .invalidSignature:
+            case .invalidSignature where ownCertificate:
                 return String(localized: "Wallet didn't accept the pass signature. Check that the certificate in Settings is your Pass Type ID certificate, and that it hasn't been revoked.")
-            case .invalidDataError:
+            case .invalidDataError where ownCertificate:
                 // PassKit also reports certificate chain failures this way.
                 return String(localized: "Wallet rejected the pass. Usually this means the certificate in Settings isn't a Pass Type ID certificate issued by Apple, or its chain to Apple couldn't be verified.")
+            case .invalidSignature, .invalidDataError:
+                return String(localized: "Wallet didn't accept the signature from Tical's server. Try again later.")
             case .unsupportedVersionError:
                 return String(localized: "This version of Wallet doesn't support the pass.")
             default:

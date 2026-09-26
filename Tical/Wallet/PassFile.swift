@@ -13,8 +13,8 @@ struct PassFile: Transferable {
 
     static var transferRepresentation: some TransferRepresentation {
         FileRepresentation(exportedContentType: .walletPass) { file in
-            let credentials = try await file.signing.credentials()
-            let data = try PassBuilder.archive(for: file.content, credentials: credentials)
+            let signer = try await file.signing.signer()
+            let data = try await PassBuilder.archive(for: file.content, signer: signer)
             let url = FileManager.default.temporaryDirectory
                 .appendingPathComponent(file.fileName)
                 .appendingPathExtension("pkpass")
