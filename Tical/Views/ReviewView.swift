@@ -407,14 +407,19 @@ struct ReviewView: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
                         .disabled(isBuildingPass)
-                        .overlay(alignment: .trailing) {
-                            // Signing on Tical's server takes a moment.
+                        // Signing on Tical's server takes a moment. Apple's badge mustn't be drawn
+                        // over, so a plain button of the same shape stands in while it signs.
+                        .opacity(isBuildingPass ? 0 : 1)
+                        .overlay {
                             if isBuildingPass {
-                                ProgressView()
-                                    .tint(.white)
-                                    .padding(.trailing, 14)
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(.black)
+                                    .strokeBorder(.white.opacity(colorScheme == .dark ? 0.6 : 0), lineWidth: 1)
+                                    .overlay { ProgressView().tint(.white) }
+                                    .accessibilityLabel("Making the pass")
                             }
                         }
+                        .animation(.smooth(duration: 0.2), value: isBuildingPass)
                     }
                 }
             }
