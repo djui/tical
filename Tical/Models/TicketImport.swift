@@ -78,15 +78,16 @@ final class TicketImport: Identifiable, Hashable {
         }
         image = UIImage(cgImage: page.image)
         pdfPage = page.pdfPage
-        sampledColor = await Self.passColor(page.image)
-        passColor = sampledColor
 
         phase = .reading(.findingCode)
         let barcode = await Self.detectBarcode(page.image)
         self.barcode = barcode
+        // The code shows where the ticket is, so the color comes from the ticket itself.
+        sampledColor = await Self.sampleColor(page.image, barcode: barcode?.bounds)
+        passColor = sampledColor
 
         phase = .reading(.readingText)
-        let lines = await Self.recognizeText(page.image)
+        let lines = await Self.recognizeText(page.image, ignoring: barcode?.bounds)
 
         phase = .reading(.understanding)
         let scan = ScanResult(lines: lines, barcode: barcode)
@@ -110,8 +111,8 @@ final class TicketImport: Identifiable, Hashable {
     }
 
     @concurrent
-    private nonisolated static func passColor(_ image: CGImage) async -> RGBColor {
-        ColorSampler.passColor(from: image)
+    private nonisolated static func sampleColor(_ image: CGImage, barcode: CGRect?) async -> RGBColor {
+        ColorSampler.passColor(from: image, barcode: barcode)
     }
 
     @concurrent
@@ -120,8 +121,8 @@ final class TicketImport: Identifiable, Hashable {
     }
 
     @concurrent
-    private nonisolated static func recognizeText(_ image: CGImage) async -> [RecognizedLine] {
-        VisionTicketScanner.recognizeText(in: image)
+    private nonisolated static func recognizeText(_ image: CGImage, ignoring barcode: CGRect?) async -> [RecognizedLine] {
+        VisionTicketScanner.recognizeText(in: image, ignoring: barcode)
     }
 
     private struct PreparedCode: @unchecked Sendable {

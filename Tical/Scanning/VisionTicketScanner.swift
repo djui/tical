@@ -44,7 +44,9 @@ nonisolated enum VisionTicketScanner {
         return ranked.lazy.compactMap(detectedBarcode(from:)).first
     }
 
-    static func recognizeText(in image: CGImage) -> [RecognizedLine] {
+    /// - Parameter barcode: Where the code is, normalized with the origin at the top left. Text
+    ///   read off the code's modules, like "n An", is left out.
+    static func recognizeText(in image: CGImage, ignoring barcode: CGRect? = nil) -> [RecognizedLine] {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
         request.usesLanguageCorrection = true
@@ -64,6 +66,10 @@ nonisolated enum VisionTicketScanner {
             if isPhoneScreenshot, box.minY > 0.94, trimmed.count <= 12 {
                 return nil
             }
+            let bounds = CGRect(x: box.minX, y: 1 - box.maxY, width: box.width, height: box.height)
+            if let barcode, isMostlyOnCode(bounds, barcode: barcode) {
+                return nil
+            }
             return RecognizedLine(
                 text: trimmed,
                 midY: Double(box.midY),
@@ -71,6 +77,14 @@ nonisolated enum VisionTicketScanner {
                 height: Double(box.height)
             )
         }
+    }
+
+    /// True when more than half of a text line lies on the code. Both are normalized, with the
+    /// origin at the top left.
+    static func isMostlyOnCode(_ line: CGRect, barcode: CGRect) -> Bool {
+        let overlap = line.intersection(barcode)
+        guard !overlap.isNull, line.width > 0, line.height > 0 else { return false }
+        return overlap.width * overlap.height > line.width * line.height / 2
     }
 
     static func detectedBarcode(from observation: VNBarcodeObservation) -> DetectedBarcode? {

@@ -156,14 +156,16 @@ nonisolated enum HeuristicTicketParser {
                 if hasDay && hasClock {
                     if absoluteStart == nil {
                         absoluteStart = date
+                        // A range such as "7 Aug, 19:00–22:00" carries its end as a duration.
+                        // A time alone gets a duration too, but its date is today's.
+                        if match.duration >= 60, match.duration < 18 * 60 * 60 {
+                            absoluteEnd = date.addingTimeInterval(match.duration)
+                        }
                     } else if absoluteEnd == nil, date > absoluteStart ?? date {
                         absoluteEnd = date
                     }
                 } else if hasDay && day == nil {
                     day = date
-                }
-                if match.duration >= 60, match.duration < 18 * 60 * 60, absoluteEnd == nil {
-                    absoluteEnd = date.addingTimeInterval(match.duration)
                 }
             }
         }
@@ -240,7 +242,9 @@ nonisolated enum HeuristicTicketParser {
             schedule.end = end
         }
 
-        if let start = schedule.start, let end = schedule.end, end <= start {
+        // An end before the start, or more than a long day after it, was misread.
+        if let start = schedule.start, let end = schedule.end,
+           end <= start || end.timeIntervalSince(start) > 18 * 60 * 60 {
             schedule.end = nil
         }
         if schedule.note.isEmpty, let day, let doorsClock,

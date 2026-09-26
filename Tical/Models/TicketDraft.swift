@@ -85,16 +85,27 @@ nonisolated struct RGBColor: Equatable, Hashable, Sendable {
         return 0.2126 * channel(red) + 0.7152 * channel(green) + 0.0722 * channel(blue)
     }
 
-    /// Light backgrounds get dark text on the pass.
-    var prefersDarkText: Bool { luminance > 0.4 }
+    static let white = RGBColor(red: 1, green: 1, blue: 1)
+    /// The near-black text passes use on light colors.
+    static let darkText = RGBColor(red: 0.08, green: 0.08, blue: 0.10)
+
+    /// Dark text when it reads better than white text.
+    var prefersDarkText: Bool { contrast(with: .darkText) > contrast(with: .white) }
 
     var foreground: RGBColor {
-        prefersDarkText ? RGBColor(red: 0.08, green: 0.08, blue: 0.10) : RGBColor(red: 1, green: 1, blue: 1)
+        prefersDarkText ? .darkText : .white
+    }
+
+    /// WCAG contrast ratio, from 1 to 21.
+    func contrast(with other: RGBColor) -> Double {
+        let lighter = max(luminance, other.luminance)
+        let darker = min(luminance, other.luminance)
+        return (lighter + 0.05) / (darker + 0.05)
     }
 
     /// Field labels: the text color, pulled toward the background.
     var label: RGBColor {
-        mixed(with: foreground, amount: 0.62)
+        mixed(with: foreground, amount: 0.75)
     }
 
     /// The `rgb(r, g, b)` string pass.json uses.

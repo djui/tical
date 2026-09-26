@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Testing
 @testable import Tical
@@ -71,6 +72,33 @@ struct HeuristicTicketParserTests {
         #expect(ticket.notes.contains("Doors"))
     }
 
+    /// A time on its own gets today's date from the date detector, which must not become the
+    /// end of an event on another day.
+    @Test func endsTwoHoursAfterAPastStart() {
+        let lines = [
+            line("Summer Beats", y: 0.80, x: 0.1, h: 0.03),
+            line("DATE", y: 0.70, x: 0.1, h: 0.013),
+            line("Fri, 7 Aug 2020", y: 0.70, x: 0.3, h: 0.02),
+            line("START", y: 0.66, x: 0.1, h: 0.013),
+            line("14:00", y: 0.66, x: 0.3, h: 0.016),
+        ]
+        let ticket = HeuristicTicketParser.parse(lines: lines, barcodePayload: "")
+        #expect(components(ticket.start) == DateComponents(year: 2020, month: 8, day: 7, hour: 14, minute: 0))
+        #expect(ticket.endIsAssumed)
+        #expect(ticket.end == ticket.start?.addingTimeInterval(TicketDefaults.assumedDuration))
+    }
+
+    @Test func readsATimeRange() {
+        let lines = [
+            line("Jazz Night", y: 0.80, x: 0.1, h: 0.03),
+            line("Sat, 17 Oct 2026, 19:00 – 22:00", y: 0.70, x: 0.1, h: 0.02),
+        ]
+        let ticket = HeuristicTicketParser.parse(lines: lines, barcodePayload: "")
+        #expect(components(ticket.start) == DateComponents(year: 2026, month: 10, day: 17, hour: 19, minute: 0))
+        #expect(components(ticket.end) == DateComponents(year: 2026, month: 10, day: 17, hour: 22, minute: 0))
+        #expect(!ticket.endIsAssumed)
+    }
+
     @Test func assumesEveningForDateOnlyTickets() {
         let lines = [
             line("Museum of Modern Art", y: 0.8, x: 0.1, h: 0.04),
@@ -82,6 +110,20 @@ struct HeuristicTicketParserTests {
         #expect(start?.month == 11)
         #expect(start?.hour == TicketDefaults.assumedStartHour)
         #expect(ticket.startTimeIsAssumed)
+    }
+}
+
+struct TextOnCodeTests {
+    private let code = CGRect(x: 0.32, y: 0.43, width: 0.36, height: 0.17)
+
+    @Test func dropsTextReadOffTheCode() {
+        // What the simulator reads off a QR code's corner: "n An".
+        #expect(VisionTicketScanner.isMostlyOnCode(CGRect(x: 0.325, y: 0.44, width: 0.1, height: 0.03), barcode: code))
+    }
+
+    @Test func keepsTextNextToTheCode() {
+        #expect(!VisionTicketScanner.isMostlyOnCode(CGRect(x: 0.30, y: 0.62, width: 0.40, height: 0.015), barcode: code))
+        #expect(!VisionTicketScanner.isMostlyOnCode(CGRect(x: 0.05, y: 0.45, width: 0.30, height: 0.02), barcode: code))
     }
 }
 
