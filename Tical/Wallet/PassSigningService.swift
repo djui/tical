@@ -149,8 +149,11 @@ actor PassSigningService {
         case 200..<300:
             guard let decoded = try? JSONDecoder().decode(Response.self, from: data) else { throw ServiceError.unavailable }
             return decoded
-        case 401 where (try? JSONDecoder().decode(ErrorResponse.self, from: data))?.error == "unknown-key":
+        case 401 where Self.errorCode(in: data) == "unknown-key":
             throw Failure.unknownKey
+        case 401 where Self.errorCode(in: data) == "attestation-required":
+            // Only a development server signs without App Attest, which the simulator lacks.
+            throw ServiceError.unsupportedDevice
         case 429:
             throw ServiceError.rateLimited
         case 400..<500:
@@ -158,6 +161,10 @@ actor PassSigningService {
         default:
             throw ServiceError.unavailable
         }
+    }
+
+    private nonisolated static func errorCode(in data: Data) -> String? {
+        (try? JSONDecoder().decode(ErrorResponse.self, from: data))?.error
     }
 
     /// The pass type of the certificate that made a signature, so a pass never names another.

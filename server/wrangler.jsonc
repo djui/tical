@@ -10,7 +10,7 @@
     {
       "binding": "DB",
       "database_name": "tical-signing",
-      // Add "database_id" here from `npx wrangler d1 create tical-signing` before deploying.
+      "database_id": "debacefb-1c81-447a-9f95-c76b302796a2",
       "migrations_dir": "migrations"
     }
   ],

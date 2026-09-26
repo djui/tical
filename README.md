@@ -34,7 +34,7 @@ Wallet only accepts passes signed with a **Pass Type ID certificate** from Apple
 
 By default, Tical's server signs with Tical's own certificate, so Wallet works without a developer account. The app sends only the SHA-256 digest of `manifest.json`, which lists file hashes, not ticket details, and gets back the `signature` file. [App Attest](https://developer.apple.com/documentation/devicecheck/establishing-your-app-s-integrity) proves each request comes from Tical on a real device, and the server limits how many passes each device signs per day.
 
-The server is a Cloudflare Worker in [`server/`](server/README.md). Set its URL as `TICAL_SIGNING_SERVICE_URL` in the Tical target's build settings. While that's empty, passes need your own certificate. For development, the `-TicalSigningServiceURL` launch argument overrides it.
+The server is a Cloudflare Worker in [`server/`](server/README.md), running at `https://tical-signing.uwe-af1.workers.dev`. The Tical target's `TICAL_SIGNING_SERVICE_URL` build setting points to it; when that's empty, passes need your own certificate. For development, the `-TicalSigningServiceURL` launch argument overrides it.
 
 ### Your own certificate
 
@@ -94,7 +94,7 @@ Tickets are read on the device and never uploaded. When Tical's server signs a p
   xcrun simctl openurl booted tical://import
   ```
 
-- The simulator can't use App Attest, so debug builds there ask the server to sign without it, which only a local development server allows. [`server/README.md`](server/README.md) shows how to run one.
+- The simulator can't use App Attest, which the deployed server requires. To make passes there, use your own certificate, or run the server locally and launch Tical with `-TicalSigningServiceURL http://127.0.0.1:8787`: debug builds then sign without App Attest, which only a local server allows. [`server/README.md`](server/README.md) shows how.
 - To try the Wallet flow without an Apple certificate, make a test CA with OpenSSL, issue a certificate for the request from **Create Request** with the subject `/UID=pass.example/CN=Pass Type ID: pass.example/OU=TEAMID/O=Example/C=US`, and import it as a PEM file that includes the test intermediate. Tical signs passes with it, and `openssl cms -verify` accepts them against the test root. Wallet itself rejects them, since only Apple's CA is trusted.
 
 ## Website

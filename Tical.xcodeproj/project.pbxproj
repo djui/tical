@@ -370,7 +370,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TICAL_SIGNING_SERVICE_URL = "";
+				TICAL_SIGNING_SERVICE_URL = "https://tical-signing.uwe-af1.workers.dev";
 			};
 			name = Debug;
 		};
@@ -408,7 +408,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TICAL_SIGNING_SERVICE_URL = "";
+				TICAL_SIGNING_SERVICE_URL = "https://tical-signing.uwe-af1.workers.dev";
 			};
 			name = Release;
 		};

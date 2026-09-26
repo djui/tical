@@ -116,14 +116,15 @@ struct PassSigningServiceTests {
     }
 
     @Test(arguments: [
-        (0, PassSigningService.ServiceError.offline),
-        (429, .rateLimited),
-        (403, .rejected),
-        (503, .unavailable),
+        (0, "", PassSigningService.ServiceError.offline),
+        (429, "rate-limited", .rateLimited),
+        (403, "invalid-assertion", .rejected),
+        (401, "attestation-required", .unsupportedDevice),
+        (503, "not-configured", .unavailable),
     ])
-    func explainsFailures(status: Int, error: PassSigningService.ServiceError) async throws {
+    func explainsFailures(status: Int, code: String, error: PassSigningService.ServiceError) async throws {
         let (service, _) = makeService(attest: FakeAttest(isSupported: false)) { _, _ in
-            (status, jsonData(["error": "whatever"]))
+            (status, jsonData(["error": code]))
         }
         await #expect(throws: error) {
             try await service.signature(for: manifest, passType: passType)
