@@ -1,212 +1,488 @@
+import EventKit
+import PassKit
 import SwiftUI
 
 struct ReviewView: View {
-    @Bindable var model: TicketImportModel
-    @State private var showingWallet = false
+    @Bindable var ticket: TicketImport
+    let model: AppModel
+
+    @State private var editorEvent: EditorEvent?
+    @State private var passToAdd: PassPresentation?
+    @State private var isBuildingPass = false
+    @State private var showingWalletSetup = false
+    @State private var showingOriginal = false
+    @State private var copiedCode = false
+    @State private var formWidth: CGFloat = 0
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
-        Form {
-            previewSection
-            sourceSection
-            detailsSection
-            scheduleSection
-            codeSection
-            actionsSection
+        content
+            .navigationTitle(ticket.isReady ? "Review" : "")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { toolbar }
+            .sheet(item: $editorEvent) { item in
+                EventEditorSheet(event: item.event, store: item.store) { action in
+                    editorEvent = nil
+                    if action == .saved {
+                        ticket.addedToCalendar = true
+                    }
+                }
+                .ignoresSafeArea()
+            }
+            .sheet(item: $passToAdd) { item in
+                AddPassSheet(pass: item.pass) {
+                    passToAdd = nil
+                    if PKPassLibrary().containsPass(item.pass) {
+                        ticket.walletPassURL = item.pass.passURL ?? URL(string: "shoebox://")
+                    }
+                }
+                .ignoresSafeArea()
+            }
+            .sheet(isPresented: $showingWalletSetup) {
+                NavigationStack {
+                    WalletSetupView(store: model.signing)
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button(role: .close) { showingWalletSetup = false }
+                            }
+                        }
+                }
+            }
+            .fullScreenCover(isPresented: $showingOriginal) {
+                OriginalImageView(image: ticket.image, highlight: ticket.barcode?.bounds)
+            }
+            .sensoryFeedback(.success, trigger: ticket.addedToCalendar) { _, added in added }
+            .sensoryFeedback(.success, trigger: ticket.walletPassURL) { _, url in url != nil }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch ticket.phase {
+        case .reading(let step):
+            ReadingView(image: ticket.image, step: step)
+                .transition(.opacity)
+        case .failed(let message):
+            ContentUnavailableView {
+                Label("Couldn't Read Ticket", systemImage: "exclamationmark.triangle")
+            } description: {
+                Text(message)
+            }
+        case .ready:
+            form
+                .transition(.opacity.combined(with: .scale(scale: 0.98)))
         }
-        .navigationTitle("Review")
-        .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showingWallet) {
-            if let draft = model.draft {
-                WalletLimitationView(draft: draft) {
-                    model.copyBarcodePayload()
+    }
+
+    // MARK: - Form
+
+    private var form: some View {
+        Form {
+            Section {
+                TicketCardView(
+                    draft: ticket.draft,
+                    color: ticket.passColor,
+                    codeImage: ticket.codeImage,
+                    codeCaption: codeCaption
+                )
+                .onTapGesture { showingOriginal = true }
+                .accessibilityAction(named: "Show Original") { showingOriginal = true }
+                .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                .listRowBackground(Color.clear)
+            } footer: {
+                if let page = ticket.pdfPage, page.count > 1 {
+                    Text("From page \(page.number) of \(page.count) of the PDF.")
+                }
+            }
+
+            Section("Event") {
+                TextField("Event name", text: $ticket.draft.title, axis: .vertical)
+                    .font(.headline)
+                    .lineLimit(1...3)
+                TextField("Venue", text: $ticket.draft.location, axis: .vertical)
+                    .lineLimit(1...3)
+                    .textContentType(.fullStreetAddress)
+            }
+
+            scheduleSection
+
+            Section("Ticket") {
+                LabeledField("Seat", text: $ticket.draft.seatInfo, prompt: "Section, row, seat")
+                LabeledField("Booking", text: $ticket.draft.confirmationCode, prompt: "Order or booking code", monospaced: true)
+                    .textInputAutocapitalization(.characters)
+                    .autocorrectionDisabled()
+                LabeledField("Organizer", text: $ticket.draft.organizer, prompt: "Promoter or presenter")
+            }
+
+            Section("Notes") {
+                TextField("Anything else to remember", text: $ticket.draft.notes, axis: .vertical)
+                    .lineLimit(2...6)
+            }
+
+            codeSection
+            colorSection
+
+            if let method = ticket.method {
+                Section {
+                } footer: {
+                    Label(method.summary, systemImage: "iphone.gen3")
+                        .font(.footnote)
                 }
             }
         }
-    }
-
-    private var previewSection: some View {
-        Section {
-            if let screenshot = model.screenshot {
-                Image(uiImage: screenshot)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxHeight: 220)
-                    .frame(maxWidth: .infinity)
-                    .accessibilityLabel("Ticket screenshot")
-            }
-            if let barcodeImage = model.barcodeImage {
-                Image(uiImage: barcodeImage)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxHeight: 160)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 4)
-                    .accessibilityLabel(barcodeAccessibilityLabel)
-            } else {
-                Text("No barcode or QR code was found in this image.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    private var sourceSection: some View {
-        Section {
-            Text(model.draft?.extractionDetail ?? "")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .accessibilityLabel(model.draft?.extractionDetail ?? "Extraction details")
-        }
-    }
-
-    private var detailsSection: some View {
-        Section("Ticket") {
-            TextField("Event", text: text(\.title), axis: .vertical)
-                .lineLimit(1...3)
-            TextField("Location or venue", text: text(\.location), axis: .vertical)
-                .lineLimit(1...3)
-            TextField("Organizer or name", text: text(\.organizer), axis: .vertical)
-                .lineLimit(1...2)
-            TextField("Seat, section, or row", text: text(\.seatInfo), axis: .vertical)
-                .lineLimit(1...3)
-            TextField("Confirmation or order code", text: text(\.confirmationCode))
-                .textInputAutocapitalization(.characters)
-                .autocorrectionDisabled()
-            TextField("Notes", text: text(\.notes), axis: .vertical)
-                .lineLimit(2...5)
+        .contentMargins(.bottom, 12, for: .scrollContent)
+        // Keep a readable width on iPad; nil keeps the system margins everywhere else.
+        .contentMargins(.horizontal, formWidth > 800 ? (formWidth - 720) / 2 : nil, for: .scrollContent)
+        .onGeometryChange(for: CGFloat.self, of: \.size.width) { formWidth = $0 }
+        .scrollDismissesKeyboard(.interactively)
+        .safeAreaBar(edge: .bottom) {
+            actionBar
         }
     }
 
     private var scheduleSection: some View {
-        Section("When") {
-            if model.draft?.start == nil {
-                Button("Add start date and time") {
-                    model.draft?.start = Date()
-                    model.draft?.startTimeIsAssumed = false
+        Section {
+            if ticket.draft.start == nil {
+                Button("Add Date and Time", systemImage: "calendar.badge.plus") {
+                    ticket.draft.start = defaultStart
+                    ticket.draft.startTimeIsAssumed = false
+                    ticket.draft.end = defaultStart.addingTimeInterval(TicketDefaults.assumedDuration)
+                    ticket.draft.endIsAssumed = true
                 }
-                .accessibilityLabel("Add start date and time")
             } else {
-                DatePicker(
-                    "Starts",
-                    selection: startBinding,
-                    displayedComponents: [.date, .hourAndMinute]
-                )
-                if model.draft?.startTimeIsAssumed == true {
-                    Text("No clock time was printed. This is set to 7:00 PM so you can change it.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-                Button("Clear start") {
-                    model.draft?.start = nil
-                    model.draft?.startTimeIsAssumed = false
-                }
-                .accessibilityLabel("Clear start date")
+                DatePicker("Starts", selection: startBinding)
+                DatePicker("Ends", selection: endBinding, in: (ticket.draft.start ?? .distantPast)...)
             }
-
-            if model.draft?.end == nil {
-                Text("If you leave the end empty, Calendar uses a 2 hour duration.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                Button("Add end date and time") {
-                    let start = model.draft?.start ?? Date()
-                    model.draft?.end = start.addingTimeInterval(TicketDefaults.assumedDuration)
-                    model.draft?.endIsAssumed = true
-                }
-                .accessibilityLabel("Add end date and time")
-            } else {
-                DatePicker(
-                    "Ends",
-                    selection: endBinding,
-                    displayedComponents: [.date, .hourAndMinute]
-                )
-                if model.draft?.endIsAssumed == true {
-                    Text("No end time was found. This is 2 hours after the start. Change it if the ticket says otherwise.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-                Button("Clear end") {
-                    model.draft?.end = nil
-                    model.draft?.endIsAssumed = false
-                }
-                .accessibilityHint("Calendar will use a 2 hour duration when the end is empty.")
+        } header: {
+            Text("When")
+        } footer: {
+            if let hint = scheduleHint {
+                Text(hint)
             }
         }
     }
 
     private var codeSection: some View {
-        Section("Detected code") {
-            if let symbology = model.draft?.barcodeSymbology, !symbology.isEmpty {
-                LabeledContent("Symbology", value: symbology)
+        Section {
+            if let barcode = ticket.barcode {
+                LabeledContent("Type", value: barcode.symbology.displayName)
+                HStack(alignment: .firstTextBaseline) {
+                    Text(barcode.displayPayload)
+                        .font(.callout.monospaced())
+                        .lineLimit(4)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Button(copiedCode ? "Copied" : "Copy", systemImage: copiedCode ? "checkmark" : "doc.on.doc") {
+                        UIPasteboard.general.string = barcode.displayPayload
+                        copiedCode = true
+                    }
+                    .labelStyle(.iconOnly)
+                    .contentTransition(.symbolEffect(.replace))
+                    .sensoryFeedback(.success, trigger: copiedCode) { _, copied in copied }
+                    .task(id: copiedCode) {
+                        guard copiedCode else { return }
+                        try? await Task.sleep(for: .seconds(1.5))
+                        copiedCode = false
+                    }
+                }
+            } else {
+                Label("No code found in this image.", systemImage: "qrcode")
+                    .foregroundStyle(.secondary)
             }
-            TextField("Barcode or QR payload", text: text(\.barcodePayload), axis: .vertical)
-                .lineLimit(2...6)
-                .font(.system(.body, design: .monospaced))
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
-            Button("Copy payload") {
-                model.copyBarcodePayload()
-            }
-            .disabled((model.draft?.barcodePayload ?? "").isEmpty)
-            .accessibilityLabel("Copy barcode payload")
+        } header: {
+            Text("Code")
+        } footer: {
+            codeFooter
         }
     }
 
-    private var actionsSection: some View {
+    @ViewBuilder
+    private var codeFooter: some View {
+        switch ticket.codeStatus {
+        case .verified:
+            Label("Checked: the Wallet pass shows a code with the same content.", systemImage: "checkmark.seal.fill")
+                .foregroundStyle(.green)
+        case .changedSymbology:
+            Label("Wallet can't show Data Matrix codes, so the pass uses a QR code with the same content. Some scanners may not accept it.", systemImage: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+        case .unverified:
+            Label("Tical couldn't confirm that the redrawn code matches. Keep the original ticket at hand.", systemImage: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+        case .unsupported:
+            Label("Wallet can't show this code. The pass will have the details but no code.", systemImage: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+        case .missing:
+            Text("A pass without a code still keeps the details together in Wallet.")
+        }
+    }
+
+    private var colorSection: some View {
         Section {
-            Button {
-                Task { await model.addToCalendar() }
-            } label: {
-                if model.isSavingCalendar {
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
-                } else {
-                    Label("Add to Calendar", systemImage: "calendar.badge.plus")
-                        .frame(maxWidth: .infinity, alignment: .center)
+            ScrollView(.horizontal) {
+                HStack(spacing: 14) {
+                    ForEach(colorChoices, id: \.self) { choice in
+                        Button {
+                            ticket.passColor = choice
+                        } label: {
+                            Circle()
+                                .fill(Color(choice).gradient)
+                                .frame(width: 34, height: 34)
+                                .overlay {
+                                    if choice == ticket.passColor {
+                                        Image(systemName: "checkmark")
+                                            .font(.caption.weight(.bold))
+                                            .foregroundStyle(Color(choice.foreground))
+                                    }
+                                }
+                                .padding(3)
+                                .overlay {
+                                    Circle().strokeBorder(choice == ticket.passColor ? Color(choice) : .clear, lineWidth: 2)
+                                }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(choice == ticket.sampledColor ? "Color from the ticket" : "Pass color")
+                        .accessibilityAddTraits(choice == ticket.passColor ? .isSelected : [])
+                    }
+                }
+                .padding(.vertical, 6)
+            }
+            .scrollIndicators(.hidden)
+        } header: {
+            Text("Pass Color")
+        } footer: {
+            Text("The first color comes from the ticket.")
+        }
+    }
+
+    // MARK: - Actions
+
+    private var actionBar: some View {
+        GlassEffectContainer(spacing: 12) {
+            HStack(spacing: 12) {
+                Button {
+                    addToCalendar()
+                } label: {
+                    Label(
+                        ticket.addedToCalendar ? "Added" : "Calendar",
+                        systemImage: ticket.addedToCalendar ? "checkmark.circle.fill" : "calendar.badge.plus"
+                    )
+                    .contentTransition(.symbolEffect(.replace))
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.glass)
+                .accessibilityLabel(ticket.addedToCalendar ? "Added to Calendar. Add again" : "Add to Calendar")
+
+                Group {
+                    if let url = ticket.walletPassURL {
+                        Button {
+                            openURL(url)
+                        } label: {
+                            Label("View in Wallet", systemImage: "checkmark.circle.fill")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.glassProminent)
+                        .tint(.black)
+                    } else if !Self.canAddPasses {
+                        // No Wallet here, as on iPad: send the pass to an iPhone instead.
+                        if model.signing.isReady {
+                            ShareLink(
+                                item: PassFile(content: ticket.passContent, signing: model.signing),
+                                preview: SharePreview(ticket.draft.displayTitle)
+                            ) {
+                                Label("Send Pass", systemImage: "square.and.arrow.up")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.glassProminent)
+                            .tint(.black)
+                        }
+                    } else {
+                        Button {
+                            addToWallet()
+                        } label: {
+                            Group {
+                                if isBuildingPass {
+                                    ProgressView()
+                                } else {
+                                    Label("Add to Wallet", systemImage: "wallet.pass.fill")
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.glassProminent)
+                        .tint(.black)
+                        .disabled(isBuildingPass)
+                    }
                 }
             }
-            .disabled(model.isSavingCalendar)
-            .accessibilityLabel("Add ticket to Calendar")
+            .controlSize(.large)
+            .fontWeight(.semibold)
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 8)
+        .frame(maxWidth: 600)
+    }
 
-            Button {
-                showingWallet = true
-            } label: {
-                Label("Add to Wallet", systemImage: "wallet.pass")
-                    .frame(maxWidth: .infinity, alignment: .center)
+    private static let canAddPasses = PKAddPassesViewController.canAddPasses()
+
+    private func addToCalendar() {
+        let store = EKEventStore()
+        let event = CalendarEvent.make(from: ticket.draft, barcode: ticket.barcode, in: store)
+        editorEvent = EditorEvent(event: event, store: store)
+    }
+
+    private func addToWallet() {
+        guard model.signing.isReady else {
+            showingWalletSetup = true
+            return
+        }
+        isBuildingPass = true
+        Task {
+            defer { isBuildingPass = false }
+            do {
+                let pass = try await ticket.makePass(signing: model.signing)
+                passToAdd = PassPresentation(pass: pass)
+            } catch {
+                model.show(String(localized: "Couldn't Make the Pass"), error.localizedDescription)
             }
-            .accessibilityLabel("Add to Wallet")
-            .accessibilityHint("Explains that Wallet still needs an Apple signing certificate. Does not create a pass.")
         }
     }
 
-    private var barcodeAccessibilityLabel: String {
-        let symbology = model.draft?.barcodeSymbology ?? ""
-        if symbology.isEmpty { return "No barcode detected" }
-        return "Detected \(symbology) code"
+    @ToolbarContentBuilder
+    private var toolbar: some ToolbarContent {
+        if ticket.isReady {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu("More", systemImage: "ellipsis") {
+                    Button("Show Original", systemImage: "photo") { showingOriginal = true }
+                    if let payload = ticket.barcode?.displayPayload {
+                        Button("Copy Code Content", systemImage: "doc.on.doc") {
+                            UIPasteboard.general.string = payload
+                        }
+                    }
+                    if !ticket.draft.confirmationCode.isEmpty {
+                        Button("Copy Booking Code", systemImage: "number") {
+                            UIPasteboard.general.string = ticket.draft.confirmationCode
+                        }
+                    }
+                    if model.signing.isReady {
+                        Divider()
+                        ShareLink(
+                            item: PassFile(content: ticket.passContent, signing: model.signing),
+                            preview: SharePreview(
+                                ticket.draft.displayTitle,
+                                image: Image(uiImage: ticket.codeImage ?? ticket.image ?? UIImage())
+                            )
+                        ) {
+                            Label("Share Pass File", systemImage: "square.and.arrow.up")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Helpers
+
+    private var codeCaption: String? {
+        let booking = ticket.draft.confirmationCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !booking.isEmpty { return booking }
+        guard let text = ticket.barcode?.text, text.count <= 32,
+              text.unicodeScalars.allSatisfy({ $0.value >= 0x20 && $0.value < 0x7F }) else { return nil }
+        return text
+    }
+
+    private var colorChoices: [RGBColor] {
+        var choices = [ticket.sampledColor]
+        for preset in RGBColor.presets where !choices.contains(preset) {
+            choices.append(preset)
+        }
+        if !choices.contains(ticket.passColor) {
+            choices.insert(ticket.passColor, at: 0)
+        }
+        return choices
+    }
+
+    private var defaultStart: Date {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        return calendar.date(
+            bySettingHour: TicketDefaults.assumedStartHour,
+            minute: TicketDefaults.assumedStartMinute,
+            second: 0,
+            of: today
+        ) ?? Date()
+    }
+
+    private var scheduleHint: String? {
+        var hints: [String] = []
+        if ticket.draft.startTimeIsAssumed, let start = ticket.draft.start {
+            hints.append(String(localized: "The ticket shows no time, so the start is set to \(start.formatted(date: .omitted, time: .shortened))."))
+        }
+        if ticket.draft.endIsAssumed {
+            let minutes = Int(TicketDefaults.assumedDuration / 60)
+            let length = Duration.seconds(minutes * 60).formatted(.units(allowed: [.hours, .minutes], width: .wide))
+            hints.append(String(localized: "No end time is printed, so the event lasts \(length)."))
+        }
+        return hints.isEmpty ? nil : hints.joined(separator: " ")
     }
 
     private var startBinding: Binding<Date> {
         Binding {
-            model.draft?.start ?? Date()
+            ticket.draft.start ?? defaultStart
         } set: { newValue in
-            model.draft?.start = newValue
-            model.draft?.startTimeIsAssumed = false
+            let oldStart = ticket.draft.start
+            ticket.draft.start = newValue
+            ticket.draft.startTimeIsAssumed = false
+            // Moving the start moves the end with it, like Calendar does.
+            if let oldStart, let end = ticket.draft.end {
+                ticket.draft.end = end.addingTimeInterval(newValue.timeIntervalSince(oldStart))
+            } else {
+                ticket.draft.end = newValue.addingTimeInterval(TicketDefaults.assumedDuration)
+            }
         }
     }
 
     private var endBinding: Binding<Date> {
         Binding {
-            model.draft?.end ?? Date()
+            ticket.draft.effectiveEnd ?? defaultStart
         } set: { newValue in
-            model.draft?.end = newValue
-            model.draft?.endIsAssumed = false
+            ticket.draft.end = newValue
+            ticket.draft.endIsAssumed = false
         }
     }
+}
 
-    private func text(_ keyPath: WritableKeyPath<TicketDraft, String>) -> Binding<String> {
-        Binding {
-            model.draft?[keyPath: keyPath] ?? ""
-        } set: { newValue in
-            model.draft?[keyPath: keyPath] = newValue
+private struct EditorEvent: Identifiable {
+    let id = UUID()
+    let event: EKEvent
+    let store: EKEventStore
+}
+
+private struct PassPresentation: Identifiable {
+    let id = UUID()
+    let pass: PKPass
+}
+
+/// A text field with its label on the leading side, like Contacts.
+private struct LabeledField: View {
+    let label: LocalizedStringKey
+    @Binding var text: String
+    let prompt: LocalizedStringKey
+    var monospaced = false
+
+    init(_ label: LocalizedStringKey, text: Binding<String>, prompt: LocalizedStringKey, monospaced: Bool = false) {
+        self.label = label
+        _text = text
+        self.prompt = prompt
+        self.monospaced = monospaced
+    }
+
+    var body: some View {
+        LabeledContent {
+            TextField(label, text: $text, prompt: Text(prompt), axis: .vertical)
+                .lineLimit(1...3)
+                .multilineTextAlignment(.trailing)
+                .monospaced(monospaced)
+        } label: {
+            Text(label)
         }
     }
 }

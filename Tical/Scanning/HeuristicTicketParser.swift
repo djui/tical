@@ -1,6 +1,6 @@
 import Foundation
 
-struct ParsedTicket: Equatable {
+nonisolated struct ParsedTicket: Equatable, Sendable {
     var title = ""
     var location = ""
     var start: Date?
@@ -15,7 +15,7 @@ struct ParsedTicket: Equatable {
 
 /// On-device fallback when the system language model is unavailable or fails.
 /// Dates use `NSDataDetector` plus English and German label heuristics. No network.
-enum HeuristicTicketParser {
+nonisolated enum HeuristicTicketParser {
     static func parse(lines: [RecognizedLine], barcodePayload: String) -> ParsedTicket {
         let ordered = lines.sorted { lhs, rhs in
             if abs(lhs.midY - rhs.midY) > 0.015 {
@@ -23,8 +23,8 @@ enum HeuristicTicketParser {
             }
             return lhs.minX < rhs.minX
         }
-        let texts = ordered
-            .map { $0.text.trimmingCharacters(in: .whitespacesAndNewlines) }
+        let texts = joinedLabelLines(ordered)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
 
         var ticket = ParsedTicket()
@@ -51,6 +51,74 @@ enum HeuristicTicketParser {
         return ticket
     }
 
+    // MARK: - Labels
+
+    /// Labels that tickets print next to or above their values.
+    private static let fieldLabels: Set<String> = [
+        "date", "datum", "day", "tag", "time", "uhrzeit", "zeit",
+        "doors", "doors open", "einlass", "entry", "admission", "show", "showtime", "start", "starts",
+        "beginn", "begin", "kickoff", "kick-off", "anstoß", "end", "ends", "ende",
+        "venue", "location", "ort", "veranstaltungsort", "spielstätte", "address", "adresse",
+        "block", "row", "reihe", "seat", "platz", "sitzplatz", "section", "sektion", "sektor",
+        "bereich", "gate", "tor", "eingang", "entrance", "level", "rang", "tribüne", "stand",
+        "order", "order no", "order no.", "order number", "booking", "booking ref", "booking reference",
+        "reference", "confirmation", "confirmation code", "bestellnummer", "bestellnr", "bestellnr.",
+        "buchungsnummer", "buchungscode", "ticketnummer", "ticket no", "ticket no.", "ticket number",
+        "organizer", "organiser", "veranstalter", "presented by",
+    ]
+
+    private static func labelKey(_ text: String) -> String {
+        text.lowercased()
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: ":#"))
+            .trimmingCharacters(in: .whitespaces)
+    }
+
+    /// OCR returns a label and its value as separate lines when a ticket prints them in two
+    /// columns, or the label above the value. This joins them into "Label: value" so the rules
+    /// below see both. Other lines pass through in reading order.
+    private static func joinedLabelLines(_ ordered: [RecognizedLine]) -> [String] {
+        var consumed = Set<Int>()
+        var output: [(index: Int, text: String)] = []
+        for (index, line) in ordered.enumerated() where !consumed.contains(index) {
+            guard fieldLabels.contains(labelKey(line.text)),
+                  let valueIndex = valueIndex(forLabelAt: index, in: ordered, consumed: consumed) else {
+                output.append((index, line.text))
+                continue
+            }
+            consumed.insert(valueIndex)
+            let label = line.text.trimmingCharacters(in: CharacterSet(charactersIn: ":# ").union(.whitespacesAndNewlines))
+            output.append((index, "\(label): \(ordered[valueIndex].text)"))
+        }
+        return output.filter { !consumed.contains($0.index) }.map(\.text)
+    }
+
+    private static func valueIndex(forLabelAt index: Int, in lines: [RecognizedLine], consumed: Set<Int>) -> Int? {
+        let label = lines[index]
+        let candidates = lines.indices.filter { candidate in
+            candidate != index
+                && !consumed.contains(candidate)
+                && !fieldLabels.contains(labelKey(lines[candidate].text))
+        }
+        // A value in the same row, to the right of the label.
+        let rowTolerance = max(label.height, 0.008) * 0.7
+        let sameRow = candidates.filter { candidate in
+            abs(lines[candidate].midY - label.midY) < rowTolerance && lines[candidate].minX > label.minX
+        }
+        if let nearest = sameRow.min(by: { lines[$0].minX < lines[$1].minX }) {
+            return nearest
+        }
+        // A value right below the label, starting at the same left edge. Vision's y grows upward.
+        let below = candidates.filter { candidate in
+            let value = lines[candidate]
+            let gap = label.midY - value.midY
+            return gap > 0
+                && gap < max(label.height, value.height) * 2.6
+                && abs(value.minX - label.minX) < 0.04
+        }
+        return below.max(by: { lines[$0].midY < lines[$1].midY })
+    }
+
     // MARK: - Schedule
 
     private struct Schedule {
@@ -74,6 +142,7 @@ enum HeuristicTicketParser {
         var absoluteStart: Date?
         var absoluteEnd: Date?
         var startClock: (Int, Int)?
+        var labeledStartClock: (Int, Int)?
         var endClock: (Int, Int)?
         var doorsClock: (Int, Int)?
 
@@ -111,11 +180,14 @@ enum HeuristicTicketParser {
                 switch role {
                 case .doors:
                     if doorsClock == nil { doorsClock = clocks[0] }
-                    if startClock == nil { startClock = clocks[1] }
+                    if labeledStartClock == nil { labeledStartClock = clocks[1] }
                 case .end:
                     if startClock == nil { startClock = clocks[0] }
                     if endClock == nil { endClock = clocks[1] }
-                case .start, .unspecified:
+                case .start:
+                    if labeledStartClock == nil { labeledStartClock = clocks[0] }
+                    if endClock == nil { endClock = clocks[1] }
+                case .unspecified:
                     if startClock == nil { startClock = clocks[0] }
                     if endClock == nil { endClock = clocks[1] }
                 }
@@ -126,7 +198,7 @@ enum HeuristicTicketParser {
                 case .doors:
                     if doorsClock == nil { doorsClock = clock }
                 case .start:
-                    if startClock == nil { startClock = clock }
+                    if labeledStartClock == nil { labeledStartClock = clock }
                 case .unspecified:
                     if startClock == nil {
                         startClock = clock
@@ -138,13 +210,17 @@ enum HeuristicTicketParser {
         }
 
         var schedule = Schedule()
-        if let absoluteStart {
+        if let day, let labeledStartClock {
+            // A time labeled as the show or start wins over a date-and-time the detector
+            // assembled, which may have picked up the doors time instead.
+            schedule.start = compose(day: day, hour: labeledStartClock.0, minute: labeledStartClock.1)
+        } else if let absoluteStart {
             schedule.start = absoluteStart
         } else if let day, let startClock {
             schedule.start = compose(day: day, hour: startClock.0, minute: startClock.1)
         } else if let day, let doorsClock {
             schedule.start = compose(day: day, hour: doorsClock.0, minute: doorsClock.1)
-            schedule.note = "The only time printed was labeled as doors or entry."
+            schedule.note = String(localized: "The only time printed was labeled as doors or entry.")
         } else if let day {
             schedule.start = compose(
                 day: day,
@@ -166,6 +242,10 @@ enum HeuristicTicketParser {
 
         if let start = schedule.start, let end = schedule.end, end <= start {
             schedule.end = nil
+        }
+        if schedule.note.isEmpty, let day, let doorsClock,
+           let doors = compose(day: day, hour: doorsClock.0, minute: doorsClock.1), doors != schedule.start {
+            schedule.note = String(localized: "Doors: \(doors.formatted(date: .omitted, time: .shortened))")
         }
         return schedule
     }
@@ -395,7 +475,7 @@ enum HeuristicTicketParser {
 
     private static func extractConfirmation(from lines: [String], barcodePayload: String) -> String {
         let blob = lines.joined(separator: "\n")
-        let pattern = #"(?i:\b(?:confirmation(?:[ \t]+code)?|order(?:[ \t]+(?:code|id|number|no))?|booking(?:[ \t]+(?:code|ref|reference|id|number))?|reservation(?:[ \t]+code)?|bestell(?:nummer|nr\.?|code)?|buchungs(?:code|nummer|nr\.?)|ticket(?:[ \t]+(?:code|number|id)|nummer|nr\.?)|auftrags(?:nummer|nr\.?)|code))\b[ \t]*[:#]?[ \t]*([A-Za-z0-9][A-Za-z0-9\-]{3,31})"#
+        let pattern = #"(?i:\b(?:confirmation(?:[ \t]+code)?|order(?:[ \t]+(?:code|id|number|no\.?|nr\.?))?|booking(?:[ \t]+(?:code|ref\.?|reference|id|number|no\.?))?|reservation(?:[ \t]+code)?|bestell(?:nummer|nr\.?|code)?|buchungs(?:code|nummer|nr\.?)|ticket(?:[ \t]+(?:code|number|id|no\.?)|nummer|nr\.?)|auftrags(?:nummer|nr\.?)|code))(?:\b|(?<=\.))[ \t]*[:#.]?[ \t]*([A-Za-z0-9][A-Za-z0-9\-]{3,31})"#
         if let value = capture(pattern, in: blob), acceptableCode(value, payload: barcodePayload) {
             return value
         }
@@ -483,7 +563,9 @@ enum HeuristicTicketParser {
             if containsDay(text) && text.count < 40 { return nil }
             if containsClock(text) && text.count < 28 { return nil }
             if text.range(of: #"^\d+$"#, options: .regularExpression) != nil { return nil }
-            return line.height * 12 + line.midY
+            if appChromeTitles.contains(text.lowercased()) { return nil }
+            // Tickets print the event in their largest type; position only breaks ties.
+            return line.height * 30 + line.midY * 0.5
         }
         let preferred = ranked.compactMap { line -> (RecognizedLine, Double)? in
             guard let value = score(line, allowLocation: false), value > 0 else { return nil }
@@ -506,6 +588,13 @@ enum HeuristicTicketParser {
         }
         return clip(title, limit: 140)
     }
+
+    /// Screen titles from ticket and wallet apps that show up in screenshots.
+    private static let appChromeTitles: Set<String> = [
+        "my tickets", "tickets", "ticket", "your tickets", "your ticket", "e-ticket", "mobile ticket",
+        "orders", "my orders", "wallet", "meine tickets", "mein ticket", "tickets anzeigen",
+        "boarding pass", "admit one",
+    ]
 
     private static func looksLikeSeatOrCodeLine(_ text: String) -> Bool {
         let lower = text.lowercased()

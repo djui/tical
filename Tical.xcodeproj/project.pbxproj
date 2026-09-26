@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -17,6 +17,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = B10000000000000000000009;
 			remoteInfo = TicalShare;
+		};
+		B10000000000000000000020 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B10000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B10000000000000000000008;
+			remoteInfo = Tical;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -37,44 +44,30 @@
 /* Begin PBXFileReference section */
 		B10000000000000000000006 /* Tical.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tical.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B10000000000000000000007 /* TicalShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TicalShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		B10000000000000000000021 /* TicalTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TicalTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		B10000000000000000000014 /* Exceptions for "Tical" folder in "Tical" target */ = {
+		B10000000000000000000014 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
-				Tical.entitlements,
 			);
 			target = B10000000000000000000008 /* Tical */;
 		};
-		B10000000000000000000015 /* Exceptions for "TicalShare" folder in "TicalShare" target */ = {
+		B10000000000000000000015 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
-				TicalShare.entitlements,
 			);
 			target = B10000000000000000000009 /* TicalShare */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		B10000000000000000000004 /* Tical */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				B10000000000000000000014 /* Exceptions for "Tical" folder in "Tical" target */,
-			);
-			path = Tical;
-			sourceTree = "<group>";
-		};
-		B10000000000000000000005 /* TicalShare */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				B10000000000000000000015 /* Exceptions for "TicalShare" folder in "TicalShare" target */,
-			);
-			path = TicalShare;
-			sourceTree = "<group>";
-		};
+		B10000000000000000000004 /* Tical */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (B10000000000000000000014 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Tical; sourceTree = "<group>"; };
+		B10000000000000000000005 /* TicalShare */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (B10000000000000000000015 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = TicalShare; sourceTree = "<group>"; };
+		B10000000000000000000022 /* TicalTests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = TicalTests; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -92,6 +85,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B10000000000000000000023 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -100,6 +100,7 @@
 			children = (
 				B10000000000000000000004 /* Tical */,
 				B10000000000000000000005 /* TicalShare */,
+				B10000000000000000000022 /* TicalTests */,
 				B10000000000000000000003 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -109,6 +110,7 @@
 			children = (
 				B10000000000000000000006 /* Tical.app */,
 				B10000000000000000000007 /* TicalShare.appex */,
+				B10000000000000000000021 /* TicalTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -162,6 +164,29 @@
 			productReference = B10000000000000000000007 /* TicalShare.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		B10000000000000000000024 /* TicalTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B10000000000000000000025 /* Build configuration list for PBXNativeTarget "TicalTests" */;
+			buildPhases = (
+				B10000000000000000000026 /* Sources */,
+				B10000000000000000000023 /* Frameworks */,
+				B10000000000000000000027 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B10000000000000000000028 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				B10000000000000000000022 /* TicalTests */,
+			);
+			name = TicalTests;
+			packageProductDependencies = (
+			);
+			productName = TicalTests;
+			productReference = B10000000000000000000021 /* TicalTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -178,6 +203,10 @@
 					B10000000000000000000009 = {
 						CreatedOnToolsVersion = 27.0;
 					};
+					B10000000000000000000024 = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = B10000000000000000000008;
+					};
 				};
 			};
 			buildConfigurationList = B10000000000000000000018 /* Build configuration list for PBXProject "Tical" */;
@@ -190,13 +219,13 @@
 			);
 			mainGroup = B10000000000000000000002;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
 			productRefGroup = B10000000000000000000003 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				B10000000000000000000008 /* Tical */,
 				B10000000000000000000009 /* TicalShare */,
+				B10000000000000000000024 /* TicalTests */,
 			);
 		};
 /* End PBXProject section */
@@ -210,6 +239,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		B10000000000000000000010 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B10000000000000000000027 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -233,6 +269,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B10000000000000000000026 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -240,6 +283,11 @@
 			isa = PBXTargetDependency;
 			target = B10000000000000000000009 /* TicalShare */;
 			targetProxy = B10000000000000000000013 /* PBXContainerItemProxy */;
+		};
+		B10000000000000000000028 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B10000000000000000000008 /* Tical */;
+			targetProxy = B10000000000000000000020 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -262,7 +310,7 @@
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -282,7 +330,7 @@
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
 			};
@@ -296,14 +344,18 @@
 				CODE_SIGN_ENTITLEMENTS = Tical/Tical.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8DR8DB9W22;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Tical/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Tical;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -313,8 +365,10 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -327,14 +381,18 @@
 				CODE_SIGN_ENTITLEMENTS = Tical/Tical.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8DR8DB9W22;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Tical/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Tical;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -344,8 +402,10 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -357,6 +417,7 @@
 				CODE_SIGN_ENTITLEMENTS = TicalShare/TicalShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8DR8DB9W22;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = TicalShare/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Tical;
@@ -369,8 +430,10 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.tical.app.share;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -382,6 +445,7 @@
 				CODE_SIGN_ENTITLEMENTS = TicalShare/TicalShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8DR8DB9W22;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = TicalShare/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Tical;
@@ -394,9 +458,49 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.tical.app.share;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		B10000000000000000000029 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8DR8DB9W22;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tical.app.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Tical.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Tical";
+			};
+			name = Debug;
+		};
+		B1000000000000000000002A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8DR8DB9W22;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tical.app.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Tical.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Tical";
 			};
 			name = Release;
 		};
@@ -426,6 +530,15 @@
 			buildConfigurations = (
 				B1000000000000000000001C /* Debug */,
 				B1000000000000000000001D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B10000000000000000000025 /* Build configuration list for PBXNativeTarget "TicalTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B10000000000000000000029 /* Debug */,
+				B1000000000000000000002A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
