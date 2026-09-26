@@ -79,6 +79,12 @@ describe("verifyAssertion", () => {
     assert.equal(await check(fixture.assertion(body, 7), body, 6), 7);
   });
 
+  test("reads only the counter when more data follows", async () => {
+    assert.equal(await check(fixture.assertion(body, 2, { extra: new Uint8Array(40).fill(0xa5) })), 2);
+    // Real devices set the attested-data flag in assertions too, with nothing after the counter.
+    assert.equal(await check(fixture.assertion(body, 3, { flags: 0x41 }), body, 2), 3);
+  });
+
   test("rejects a replayed assertion", async () => {
     await assert.rejects(check(fixture.assertion(body, 3), body, 3), AppAttestError);
   });

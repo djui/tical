@@ -66,7 +66,7 @@ export async function verifyAttestation(options: {
     throw new AppAttestError("The key identifier doesn't match the attested key.");
   }
 
-  const data = authenticatorData(authData);
+  const data = authenticatorData(authData, true);
   // 6. The key belongs to one of our apps.
   const appId = await matchingAppId(data.rpIdHash, options.appIds);
   // 7. A new key hasn't signed anything yet.
@@ -107,7 +107,7 @@ export async function verifyAssertion(options: {
   if (!(await verifyECDSA(options.publicKey, signature, nonce, "SHA-256"))) {
     throw new AppAttestError("The assertion's signature isn't valid.");
   }
-  const data = authenticatorData(authData);
+  const data = authenticatorData(authData, false);
   if (!equal(data.rpIdHash, await sha256(utf8(options.appId)))) throw new AppAttestError("The assertion is for another app.");
   if (data.counter <= options.previousCounter) throw new AppAttestError("The assertion was used before.");
   return data.counter;
@@ -134,9 +134,9 @@ function certificateNonce(certificate: Certificate): Bytes {
   });
 }
 
-/** WebAuthn authenticator data, as App Attest lays it out. */
-function authenticatorData(data: Bytes) {
-  if (data.length < 37) throw new AppAttestError("The authenticator data is truncated.");
+/** WebAuthn authenticator data, as App Attest lays it out. Only attestations carry the credential. */
+function authenticatorData(data: Bytes, withCredential: boolean) {
+  if (data.length < 37) throw new AppAttestError(`The authenticator data is truncated (${data.length} bytes).`);
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
   const result = {
     rpIdHash: data.subarray(0, 32),
@@ -144,9 +144,11 @@ function authenticatorData(data: Bytes) {
     aaguid: undefined as Bytes | undefined,
     credentialId: undefined as Bytes | undefined,
   };
-  if (data.length >= 55) {
+  // Attested credential data follows only when the AT flag is set, as in an attestation.
+  if (withCredential) {
+    if (data.length < 55) throw new AppAttestError(`The authenticator data is truncated (${data.length} bytes).`);
     const length = view.getUint16(53);
-    if (55 + length > data.length) throw new AppAttestError("The authenticator data is truncated.");
+    if (55 + length > data.length) throw new AppAttestError(`The credential ID is truncated (${data.length} bytes, ID ${length}).`);
     result.aaguid = data.subarray(37, 53);
     result.credentialId = data.subarray(55, 55 + length);
   }

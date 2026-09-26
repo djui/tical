@@ -90,8 +90,13 @@ export class AppAttestFixture {
     });
   }
 
-  assertion(clientData: Bytes, counterValue: number, options: { appId?: string; signingKey?: KeyPair } = {}): Bytes {
-    const authenticatorData = concat([sha256(utf8(options.appId ?? appId)), Uint8Array.of(0x01), counter(counterValue)]);
+  assertion(clientData: Bytes, counterValue: number, options: { appId?: string; signingKey?: KeyPair; extra?: Bytes; flags?: number } = {}): Bytes {
+    const authenticatorData = concat([
+      sha256(utf8(options.appId ?? appId)),
+      Uint8Array.of(options.flags ?? 0x01),
+      counter(counterValue),
+      options.extra ?? new Uint8Array(0),
+    ]);
     const nonce = sha256(concat([authenticatorData, sha256(clientData)]));
     const signature = bytes(sign("sha256", nonce, (options.signingKey ?? this.credential).privateKey));
     return CBOR.encode({ signature, authenticatorData });
