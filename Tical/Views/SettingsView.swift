@@ -23,7 +23,7 @@ struct SettingsView: View {
                         }
                     }
                 } footer: {
-                    Text("Tical signs passes on this iPhone with your Pass Type ID certificate.")
+                    Text("Tical signs passes on this \(Device.name) with your Pass Type ID certificate.")
                 }
 
                 Section {
@@ -42,7 +42,7 @@ struct SettingsView: View {
 
                 Section("Privacy") {
                     Label {
-                        Text("Tical reads tickets with Vision and Apple Intelligence on this iPhone. Nothing is uploaded, and Tical doesn't read your calendar.")
+                        Text("Tical reads tickets with Vision and Apple Intelligence on this \(Device.name). Nothing is uploaded, and Tical doesn't read your calendar.")
                     } icon: {
                         Image(systemName: "lock.shield")
                     }

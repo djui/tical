@@ -23,12 +23,13 @@ struct HomeView: View {
                 VStack(spacing: 10) {
                     Text("Tickets, sorted.")
                         .font(.largeTitle.weight(.bold))
-                    Text("Turn a ticket screenshot or PDF into a calendar event and a Wallet pass. Tical reads it on this iPhone.")
+                    Text("Turn a ticket screenshot or PDF into a calendar event and a Wallet pass. Tical reads it on this \(Device.name).")
                         .font(.body)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                 }
 
+                recentScreenshots
                 actions
                 tips
             }
@@ -101,6 +102,22 @@ struct HomeView: View {
         canPaste = pasteboard.hasImages || pasteboard.contains(pasteboardTypes: [UTType.pdf.identifier])
     }
 
+    /// The newest screenshots, one tap away. The picker runs outside Tical, so it needs no
+    /// access to the photo library.
+    private var recentScreenshots: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Recent Screenshots")
+                .font(.headline)
+                .accessibilityAddTraits(.isHeader)
+            PhotosPicker("Recent Screenshots", selection: $photoItem, matching: .screenshots, preferredItemEncoding: .current)
+                .photosPickerStyle(.compact)
+                .photosPickerDisabledCapabilities(.selectionActions)
+                .photosPickerAccessoryVisibility(.hidden, edges: .all)
+                .frame(height: 110)
+                .clipShape(.rect(cornerRadius: 20))
+        }
+    }
+
     private var actions: some View {
         GlassEffectContainer(spacing: 12) {
             VStack(spacing: 12) {
@@ -108,19 +125,19 @@ struct HomeView: View {
                     showingPhotos = true
                     TicketExtractionService.prewarm()
                 } label: {
-                    Label("Choose Screenshot", systemImage: "photo.on.rectangle.angled")
+                    Label("Choose from Photos", systemImage: "photo.on.rectangle.angled")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.glassProminent)
                 .controlSize(.extraLarge)
-                .accessibilityHint("Opens your photos to pick a ticket screenshot.")
+                .accessibilityHint("Opens your photos to pick a ticket screenshot or photo.")
 
                 HStack(spacing: 12) {
                     Button {
                         showingFiles = true
                         TicketExtractionService.prewarm()
                     } label: {
-                        Label("Choose File", systemImage: "folder")
+                        Label("Choose from Files", systemImage: "folder")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.glass)
@@ -156,7 +173,7 @@ struct HomeView: View {
                     symbol: "wallet.pass.fill",
                     tint: .green,
                     title: "Wallet passes are on",
-                    message: "Tical signs passes with your certificate, on this iPhone."
+                    message: "Tical signs passes with your certificate, on this \(Device.name)."
                 )
             } else {
                 Button {
@@ -180,7 +197,7 @@ struct HomeView: View {
                 symbol: "lock.shield.fill",
                 tint: .purple,
                 title: "Private by design",
-                message: "Tickets are read on this iPhone and never uploaded."
+                message: "Tickets are read on this \(Device.name) and never uploaded."
             )
         }
     }

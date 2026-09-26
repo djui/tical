@@ -14,6 +14,7 @@ struct ReviewView: View {
     @State private var copiedCode = false
     @State private var formWidth: CGFloat = 0
     @Environment(\.openURL) private var openURL
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         content
@@ -124,7 +125,7 @@ struct ReviewView: View {
             if let method = ticket.method {
                 Section {
                 } footer: {
-                    Label(method.summary, systemImage: "iphone.gen3")
+                    Label(method.summary(on: Device.name), systemImage: Device.symbol)
                         .font(.footnote)
                 }
             }
@@ -137,6 +138,8 @@ struct ReviewView: View {
         .safeAreaBar(edge: .bottom) {
             actionBar
         }
+        // Wallet's badge isn't glass, which otherwise makes the system draw a hard edge.
+        .scrollEdgeEffectStyle(.soft, for: .bottom)
     }
 
     private var scheduleSection: some View {
@@ -295,26 +298,21 @@ struct ReviewView: View {
                             .tint(.black)
                         }
                     } else {
-                        Button {
+                        // Apple's own badge: its guidelines don't allow a custom one.
+                        AddPassToWalletButton {
                             addToWallet()
-                        } label: {
-                            Group {
-                                if isBuildingPass {
-                                    ProgressView()
-                                } else {
-                                    Label("Add to Wallet", systemImage: "wallet.pass.fill")
-                                }
-                            }
-                            .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.glassProminent)
-                        .tint(.black)
+                        .addPassToWalletButtonStyle(colorScheme == .dark ? .blackOutline : .black)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
                         .disabled(isBuildingPass)
                     }
                 }
             }
             .controlSize(.large)
             .fontWeight(.semibold)
+            // Match the corners of Wallet's badge, which can't be changed.
+            .buttonBorderShape(.roundedRectangle(radius: 4))
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 8)

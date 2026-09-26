@@ -113,6 +113,14 @@ struct HeuristicTicketParserTests {
     }
 }
 
+struct ExtractionSummaryTests {
+    @Test func namesTheDevice() {
+        #expect(ExtractionMethod.model(sawImage: true).summary(on: "iPad").contains("this iPad"))
+        #expect(ExtractionMethod.textParser(.deviceNotEligible).summary(on: "iPad").contains("This iPad doesn't support"))
+        #expect(!ExtractionMethod.textParser(.modelUnavailable).summary(on: "iPad").contains("iPhone"))
+    }
+}
+
 struct TextOnCodeTests {
     private let code = CGRect(x: 0.32, y: 0.43, width: 0.36, height: 0.17)
 

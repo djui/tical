@@ -19,12 +19,12 @@ xcodebuild test -project Tical.xcodeproj -scheme Tical -destination 'platform=iO
 
 ## What the app does
 
-1. Pick a screenshot or photo, choose a file (an image or a PDF), paste, drag and drop, or share to Tical from Photos, Files, Mail, or Safari. For a PDF, Tical uses the first page that carries a code.
+1. Tap one of the recent screenshots on the home screen, choose from Photos or Files (an image or a PDF), paste, drag and drop, or share to Tical from Photos, Files, Mail, or Safari. For a PDF, Tical uses the first page that carries a code.
 2. Vision reads the code (QR, Aztec, PDF417, Code 128, Data Matrix) and the text. Binary QR codes are decoded to their bytes, so the pass carries the same content.
 3. Apple Intelligence reads the ticket image and its text into fields. If the model isn't available, doesn't answer within 20 seconds, or fails, the local parser (English and German labels, `NSDataDetector`) fills them in. Codes the model reports are only kept if they're printed on the ticket.
 4. The review screen shows the pass as Wallet will show it, in a color taken from the ticket. Every field can be edited.
 5. **Calendar** opens the system event editor, filled in. The editor runs outside Tical, so Tical needs no calendar access and never sees your other events.
-6. **Add to Wallet** builds and signs the pass on the iPhone and shows the system sheet to add it. Tical redraws the code and reads it back before offering it, and says so when it can't confirm a match.
+6. **Add to Apple Wallet** (Apple's own badge) builds and signs the pass on the device and shows the system sheet to add it. Tical redraws the code and reads it back before offering it, and says so when it can't confirm a match.
 
 ## Wallet passes
 
@@ -54,7 +54,7 @@ Share extensions can't open URLs through `NSExtensionContext`, so the extension 
 
 ## Permissions and privacy
 
-Tical asks for no permissions. The Photos picker, the Files picker, the paste button, and the Calendar editor all run outside the app.
+Tical asks for no permissions. The Photos picker (including the recent screenshots row), the Files picker, the paste button, and the Calendar editor all run outside the app. The first time the screenshots row appears, iOS explains once that Tical only receives the photo you tap.
 
 Tickets are read on the device and never uploaded. The only network access is iOS fetching Apple's public intermediate certificate during Wallet setup, when the certificate file doesn't include it. The privacy manifest declares user defaults (the two settings below) and file timestamps (picking the newest shared file).
 

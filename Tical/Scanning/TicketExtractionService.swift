@@ -31,17 +31,38 @@ nonisolated struct GeneratedTicket {
 }
 
 nonisolated enum ExtractionMethod: Equatable, Sendable {
-    case model(sawImage: Bool)
-    case textParser(reason: String)
+    /// Why the local text parser read the ticket instead of the language model.
+    enum ParserReason: Equatable, Sendable {
+        case nothingFound
+        case deviceNotEligible
+        case appleIntelligenceOff
+        case modelNotReady
+        case modelUnavailable
+        case modelFailed
+    }
 
-    var summary: String {
+    case model(sawImage: Bool)
+    case textParser(ParserReason)
+
+    /// - Parameter device: What to call the device, like "iPhone".
+    func summary(on device: String) -> String {
         switch self {
-        case .model(true):
-            String(localized: "Read on this iPhone with Apple Intelligence, which looked at the ticket and its text.")
-        case .model(false):
-            String(localized: "Read on this iPhone with Apple Intelligence.")
-        case .textParser(let reason):
-            reason
+        case .model(sawImage: true):
+            String(localized: "Read on this \(device) with Apple Intelligence, which looked at the ticket and its text.")
+        case .model(sawImage: false):
+            String(localized: "Read on this \(device) with Apple Intelligence.")
+        case .textParser(.nothingFound):
+            String(localized: "No text or code was found. You can type the details yourself.")
+        case .textParser(.deviceNotEligible):
+            String(localized: "Read on this \(device) with Tical's text parser. This \(device) doesn't support Apple Intelligence.")
+        case .textParser(.appleIntelligenceOff):
+            String(localized: "Read on this \(device) with Tical's text parser. Turn on Apple Intelligence in Settings for better results.")
+        case .textParser(.modelNotReady):
+            String(localized: "Read on this \(device) with Tical's text parser. Apple Intelligence is still getting ready.")
+        case .textParser(.modelUnavailable):
+            String(localized: "Read on this \(device) with Tical's text parser.")
+        case .textParser(.modelFailed):
+            String(localized: "Apple Intelligence couldn't read this ticket, so Tical used its text parser. Check the details.")
         }
     }
 }
@@ -72,11 +93,11 @@ nonisolated enum TicketExtractionService {
         if scan.isEmpty {
             return ExtractionResult(
                 draft: draft(from: parsed),
-                method: .textParser(reason: String(localized: "No text or code was found. You can type the details yourself."))
+                method: .textParser(.nothingFound)
             )
         }
         if let reason = modelUnavailableReason() {
-            return ExtractionResult(draft: draft(from: parsed), method: .textParser(reason: reason))
+            return ExtractionResult(draft: draft(from: parsed), method: .textParser(reason))
         }
 
         let model = SystemLanguageModel.default
@@ -100,7 +121,7 @@ nonisolated enum TicketExtractionService {
         }
         return ExtractionResult(
             draft: draft(from: parsed),
-            method: .textParser(reason: String(localized: "Apple Intelligence couldn't read this ticket, so Tical used its text parser. Check the details."))
+            method: .textParser(.modelFailed)
         )
     }
 
@@ -112,18 +133,13 @@ nonisolated enum TicketExtractionService {
         Return an empty string for anything the ticket doesn't show. Times are local to the event.
         """
 
-    private static func modelUnavailableReason() -> String? {
+    private static func modelUnavailableReason() -> ExtractionMethod.ParserReason? {
         switch SystemLanguageModel.default.availability {
-        case .available:
-            return nil
-        case .unavailable(.deviceNotEligible):
-            return String(localized: "Read on this iPhone with Tical's text parser. This device doesn't support Apple Intelligence.")
-        case .unavailable(.appleIntelligenceNotEnabled):
-            return String(localized: "Read on this iPhone with Tical's text parser. Turn on Apple Intelligence in Settings for better results.")
-        case .unavailable(.modelNotReady):
-            return String(localized: "Read on this iPhone with Tical's text parser. Apple Intelligence is still getting ready.")
-        case .unavailable:
-            return String(localized: "Read on this iPhone with Tical's text parser.")
+        case .available: nil
+        case .unavailable(.deviceNotEligible): .deviceNotEligible
+        case .unavailable(.appleIntelligenceNotEnabled): .appleIntelligenceOff
+        case .unavailable(.modelNotReady): .modelNotReady
+        case .unavailable: .modelUnavailable
         }
     }
 

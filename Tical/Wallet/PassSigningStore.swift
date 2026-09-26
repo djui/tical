@@ -57,7 +57,7 @@ final class PassSigningStore {
             case .notAPassTypeCertificate:
                 String(localized: "That isn't a Pass Type ID certificate. In your Apple Developer account, create the certificate under Pass Type IDs.")
             case .keyMismatch:
-                String(localized: "That certificate was made for a different signing request. Upload the request from this iPhone and import the certificate Apple returns.")
+                String(localized: "That certificate was made for a different signing request. Upload the request Tical made and import the certificate Apple returns.")
             case .wrongPassword:
                 String(localized: "That password doesn't open the .p12 file.")
             case .unreadableFile:

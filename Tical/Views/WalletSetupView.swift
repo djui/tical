@@ -65,7 +65,7 @@ struct WalletSetupView: View {
         .confirmationDialog("Remove the certificate?", isPresented: $confirmingRemoval, titleVisibility: .visible) {
             Button("Remove Certificate", role: .destructive) { store.removeCertificate() }
         } message: {
-            Text("Tical deletes the certificate and its private key from this iPhone. Passes already in Wallet stay there.")
+            Text("Tical deletes the certificate and its private key from this \(Device.name). Passes already in Wallet stay there.")
         }
         .onChange(of: store.pendingRequest, initial: true) { _, request in
             requestFile = request?.writeFile()
@@ -86,7 +86,7 @@ struct WalletSetupView: View {
                     .accessibilityHidden(true)
                 Text("Wallet only accepts passes signed with a Pass Type ID certificate from Apple.")
                     .font(.headline)
-                Text("If you're in the Apple Developer Program, you can make one in a few minutes. Tical then makes and signs passes on this iPhone, and the signing key never leaves its keychain.")
+                Text("If you're in the Apple Developer Program, you can make one in a few minutes. Tical then makes and signs passes on this \(Device.name), and the signing key never leaves its keychain.")
                     .foregroundStyle(.secondary)
             }
             .padding(.vertical, 6)
@@ -104,7 +104,7 @@ struct WalletSetupView: View {
                     Button("Start Over", role: .destructive) { store.discardRequest() }
                         .font(.footnote)
                 } else {
-                    Text("Tical makes a private key on this iPhone and a request that Apple turns into a certificate.")
+                    Text("Tical makes a private key on this \(Device.name) and a request that Apple turns into a certificate.")
                     Button("Create Request", systemImage: "key.fill") { createRequest() }
                 }
             }
@@ -171,7 +171,7 @@ struct WalletSetupView: View {
                 }
             }
         } footer: {
-            Text("Tical signs each pass on this iPhone with this certificate.")
+            Text("Tical signs each pass on this \(Device.name) with this certificate.")
         }
 
         if certificate.isExpired || certificate.expires.map(expiresSoon) == true || store.pendingRequest != nil {
