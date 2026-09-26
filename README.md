@@ -32,7 +32,7 @@ Wallet only accepts passes signed with a **Pass Type ID certificate** from Apple
 
 Set it up once in **Settings ▸ Wallet Passes**:
 
-1. **Create Request.** Tical makes an RSA key in the iPhone's keychain and a certificate signing request for it. The key never leaves the device (it's excluded from backups and iCloud Keychain).
+1. **Create Request.** Tical makes an RSA key in the iPhone's keychain and a certificate signing request for it. The key never leaves the device: it doesn't sync to iCloud Keychain and can't be restored onto another device.
 2. In the Apple Developer account, register a Pass Type ID, create a **Pass Type ID certificate** for it, and upload the request.
 3. **Import Certificate**: pick the `pass.cer` file Apple returns.
 
@@ -76,6 +76,20 @@ Tickets are read on the device and never uploaded. The only network access is iO
   ```
 
 - To try the Wallet flow without an Apple certificate, make a test CA with OpenSSL, issue a certificate for the request from **Create Request** with the subject `/UID=pass.example/CN=Pass Type ID: pass.example/OU=TEAMID/O=Example/C=US`, and import it as a PEM file that includes the test intermediate. Tical signs passes with it, and `openssl cms -verify` accepts them against the test root. Wallet itself rejects them, since only Apple's CA is trusted.
+
+## Website
+
+`docs/` is the app's website: a landing page, the privacy policy, and the support page, in plain HTML and CSS with no build step. Use `privacy.html` and `support.html` as the Privacy Policy and Support URLs in App Store Connect.
+
+To publish it with GitHub Pages, choose **Settings ▸ Pages ▸ Deploy from a branch**, then `main` and `/docs`. It's served at `https://djui.github.io/tical/`, the address the pages' canonical and social preview links use; update them if you move the site to your own domain.
+
+To preview it locally:
+
+```sh
+python3 -m http.server 8765 --directory docs
+```
+
+The screenshots come from the iPhone 18 Pro simulator with the status bar set to 9:41 (`xcrun simctl status_bar booted override --time 9:41`). The tickets in them are made up.
 
 ## Code layout
 

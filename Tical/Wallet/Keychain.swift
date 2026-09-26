@@ -1,8 +1,8 @@
 import Foundation
 import Security
 
-/// Keychain storage for pass signing. Items stay on this device: they're excluded from
-/// backups and from iCloud Keychain.
+/// Keychain storage for pass signing. Items stay on this device: they don't sync to iCloud
+/// Keychain and can't be restored onto another device.
 nonisolated enum Keychain {
     struct Failure: LocalizedError {
         let status: OSStatus
