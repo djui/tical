@@ -49,24 +49,23 @@ struct TicketCardView: View {
                 }
                 Spacer(minLength: 12)
                 if let start = draft.start {
-                    field("DATE", start.formatted(.dateTime.day().month(.abbreviated)), alignment: .trailing)
+                    // The same style as the pass, which Wallet formats for the region, like "17/10/2026" or "10/17/26".
+                    field("DATE", DateFormatter.localizedString(from: start, dateStyle: .short, timeStyle: .none), alignment: .trailing)
                 }
             }
 
             field("EVENT", draft.displayTitle, font: .title2.weight(.bold), lineLimit: 3)
 
-            HStack(alignment: .top, spacing: 16) {
-                if let start = draft.start {
-                    field(
-                        draft.startTimeIsAssumed ? "DAY" : "STARTS",
-                        draft.startTimeIsAssumed
-                            ? start.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).year())
-                            : start.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).hour().minute())
-                    )
-                }
-                Spacer(minLength: 0)
-                if !location.isEmpty {
-                    field("VENUE", location, alignment: .trailing, lineLimit: 2)
+            // Like Wallet, a row's first field sits on the left and its last on the right, each aligned to its leading edge.
+            if startTime != nil || !location.isEmpty {
+                HStack(alignment: .top, spacing: 16) {
+                    if let startTime {
+                        field("STARTS", startTime)
+                        Spacer(minLength: 0)
+                    }
+                    if !location.isEmpty {
+                        field("VENUE", location, lineLimit: 2)
+                    }
                 }
             }
 
@@ -74,10 +73,10 @@ struct TicketCardView: View {
                 HStack(alignment: .top, spacing: 16) {
                     if !seat.isEmpty {
                         field("SEAT", seat, lineLimit: 2)
+                        Spacer(minLength: 0)
                     }
-                    Spacer(minLength: 0)
                     if !booking.isEmpty {
-                        field("BOOKING", booking, alignment: .trailing, monospaced: true)
+                        field("BOOKING", booking, monospaced: true)
                     }
                 }
             }
@@ -122,6 +121,12 @@ struct TicketCardView: View {
         if !draft.organizer.isEmpty { return draft.organizer }
         if !location.isEmpty { return location }
         return String(localized: "Ticket")
+    }
+
+    /// The start time, if the ticket gives one; the header shows the day.
+    private var startTime: String? {
+        guard let start = draft.start, !draft.startTimeIsAssumed else { return nil }
+        return DateFormatter.localizedString(from: start, dateStyle: .none, timeStyle: .short)
     }
 
     private var location: String { draft.location.trimmingCharacters(in: .whitespacesAndNewlines) }

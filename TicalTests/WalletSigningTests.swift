@@ -175,6 +175,28 @@ struct PassBuilderTests {
         let ticket = try #require(pass["eventTicket"] as? [String: Any])
         let primary = try #require((ticket["primaryFields"] as? [[String: Any]])?.first)
         #expect(primary["value"] as? String == "The Midnight Owls")
+
+        // The day in the header, and only the time below it.
+        let header = try #require((ticket["headerFields"] as? [[String: Any]])?.first)
+        #expect(header["key"] as? String == "date")
+        #expect(header["dateStyle"] as? String == "PKDateStyleShort")
+        #expect(header["timeStyle"] as? String == "PKDateStyleNone")
+        let secondary = try #require(ticket["secondaryFields"] as? [[String: Any]])
+        #expect(secondary.compactMap { $0["key"] as? String } == ["starts", "venue"])
+        #expect(secondary[0]["dateStyle"] as? String == "PKDateStyleNone")
+        #expect(secondary[0]["timeStyle"] as? String == "PKDateStyleShort")
+    }
+
+    @Test func leavesOutAnAssumedStartTime() throws {
+        var dateOnly = content()
+        dateOnly.draft.startTimeIsAssumed = true
+        let identity = try TestIdentity.passType()
+        let signing = SigningCertificate(certificate: identity.certificate, intermediates: [])
+        let data = try PassBuilder.passJSON(for: dateOnly, signing: signing)
+        let pass = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let ticket = try #require(pass["eventTicket"] as? [String: Any])
+        #expect((ticket["headerFields"] as? [[String: Any]])?.first?["key"] as? String == "date")
+        #expect((ticket["secondaryFields"] as? [[String: Any]])?.compactMap { $0["key"] as? String } == ["venue"])
     }
 
     @Test func buildsSignedArchive() throws {

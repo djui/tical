@@ -50,13 +50,10 @@ nonisolated enum PassBuilder {
 
         if let start = draft.start {
             header.append(field("date", String(localized: "DATE"), iso(start), dateStyle: "PKDateStyleShort", timeStyle: "PKDateStyleNone"))
-            secondary.append(field(
-                "starts",
-                draft.startTimeIsAssumed ? String(localized: "DAY") : String(localized: "STARTS"),
-                iso(start),
-                dateStyle: "PKDateStyleMedium",
-                timeStyle: draft.startTimeIsAssumed ? "PKDateStyleNone" : "PKDateStyleShort"
-            ))
+            // The header shows the day, so this shows just the time, and only if the ticket gives one.
+            if !draft.startTimeIsAssumed {
+                secondary.append(field("starts", String(localized: "STARTS"), iso(start), dateStyle: "PKDateStyleNone", timeStyle: "PKDateStyleShort"))
+            }
             pass["relevantDate"] = iso(start)
             let expiry = draft.endIsAssumed ? start.addingTimeInterval(2 * 86_400) : (draft.effectiveEnd ?? start).addingTimeInterval(86_400)
             pass["expirationDate"] = iso(expiry)
