@@ -1,0 +1,6 @@
+node_modules/
+.wrangler/
+# Local secrets for `wrangler dev`, written by `npm run dev-vars`.
+.dev.vars
+# Private keys and certificate requests. Never commit these.
+.secrets/

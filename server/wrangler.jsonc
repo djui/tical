@@ -1,0 +1,28 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tical-signing",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-25",
+  "observability": { "enabled": true },
+  // Apple's certificates ship with the Worker as text.
+  "rules": [{ "type": "Text", "globs": ["**/*.pem"], "fallthrough": true }],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "tical-signing",
+      // Add "database_id" here from `npx wrangler d1 create tical-signing` before deploying.
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    // Team ID and bundle ID of the apps that may ask for signatures.
+    "APP_IDS": "8DR8DB9W22.com.tical.app",
+    // Accepts builds that Xcode installs. TestFlight and App Store builds use production.
+    "ALLOW_DEVELOPMENT_ATTESTATION": "true",
+    "SIGNATURES_PER_KEY_PER_DAY": "30",
+    "SIGNATURES_PER_DAY": "5000",
+    "KEYS_PER_DAY": "2000"
+  },
+  // Removes expired challenges and counts, and keys unused for over a year.
+  "triggers": { "crons": ["17 3 * * *"] }
+}
