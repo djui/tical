@@ -250,9 +250,13 @@ p {
 .button {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   min-height: 48px;
-  padding: 0 22px;
+  padding: 10px 22px;
+  text-align: center;
+  text-wrap: balance;
+  line-height: 1.25;
   border-radius: 999px;
   font-weight: 600;
   font-size: 1rem;
@@ -828,6 +832,16 @@ p {
 
 .doc .button {
   margin-top: 22px;
+}
+
+@media (max-width: 400px) {
+  :root {
+    --gutter: 16px;
+  }
+
+  .button {
+    padding-inline: 18px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
