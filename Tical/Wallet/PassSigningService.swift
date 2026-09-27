@@ -72,7 +72,9 @@ actor PassSigningService {
         do {
             signature = try await requestSignature(digest: digest)
         } catch Failure.unknownKey {
-            // The server forgot this device's key, for example after a long time unused.
+            // The server forgot this device's key, for example after a long time unused, or the
+            // device can't use it any more, for example after a TestFlight build replaced one
+            // from Xcode, which attests in another environment, or after a restore.
             defaults.removeObject(forKey: keyIDDefaultsKey)
             signature = try await requestSignature(digest: digest)
         }
@@ -90,7 +92,12 @@ actor PassSigningService {
         let body = try Self.encode(SignatureRequest(keyId: keyID, manifestDigest: digest))
         var request = makeRequest("v1/signatures", body: body)
         if let keyID {
-            let assertion = try await attest.generateAssertion(keyID, clientDataHash: Data(SHA256.hash(data: body)))
+            let assertion: Data
+            do {
+                assertion = try await attest.generateAssertion(keyID, clientDataHash: Data(SHA256.hash(data: body)))
+            } catch let error as DCError where error.code == .invalidKey {
+                throw Failure.unknownKey
+            }
             request.setValue(assertion.base64EncodedString(), forHTTPHeaderField: "X-Tical-Assertion")
         }
         let response: SignatureResponse = try await send(request)

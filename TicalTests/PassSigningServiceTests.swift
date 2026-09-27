@@ -1,4 +1,5 @@
 import CryptoKit
+import DeviceCheck
 import Foundation
 import Testing
 @testable import Tical
@@ -105,6 +106,28 @@ struct PassSigningServiceTests {
         #expect(recorder.requests.map(\.path) == ["/v1/signatures", "/v1/challenges", "/v1/keys", "/v1/signatures"])
     }
 
+    @Test func registersANewKeyWhenTheDeviceCantUseTheOldOne() async throws {
+        let signature = try signatureFile()
+        let recorder = Recorder()
+        // A key from an Xcode build, which a TestFlight build installed over it can't use.
+        let attest = FakeAttest(isSupported: true, invalidKeys: ["old-key"])
+        let (service, defaults) = makeService(attest: attest) { request, body in
+            recorder.record(request, body)
+            switch request.url?.path {
+            case "/v1/challenges": return (200, jsonData(["challenge": Data(count: 32).base64EncodedString()]))
+            case "/v1/keys": return (201, jsonData([:]))
+            case "/v1/signatures": return (200, jsonData(["signature": signature.base64EncodedString()]))
+            default: return (404, Data())
+            }
+        }
+        let keyIDDefaultsKey = "AppAttestKeyID \(service.baseURL.absoluteString)"
+        defaults.set("old-key", forKey: keyIDDefaultsKey)
+
+        #expect(try await service.signature(for: manifest, passType: passType) == signature)
+        #expect(recorder.requests.map(\.path) == ["/v1/challenges", "/v1/keys", "/v1/signatures"])
+        #expect(defaults.string(forKey: keyIDDefaultsKey) == "key-1")
+    }
+
     @Test func refusesASignatureFromAnotherPassType() async throws {
         let signature = try signatureFile(passTypeIdentifier: "pass.other.tickets")
         let (service, _) = makeService(attest: FakeAttest(isSupported: false)) { _, _ in
@@ -139,12 +162,14 @@ private func jsonData(_ object: [String: Any]) -> Data {
 /// App Attest without a Secure Enclave: predictable keys, attestations, and assertions.
 nonisolated final class FakeAttest: AppAttesting, @unchecked Sendable {
     let isSupported: Bool
+    private let invalidKeys: Set<String>
     private let lock = NSLock()
     private var keys = 0
     private var hashes: [Data] = []
 
-    init(isSupported: Bool) {
+    init(isSupported: Bool, invalidKeys: Set<String> = []) {
         self.isSupported = isSupported
+        self.invalidKeys = invalidKeys
     }
 
     var assertedHashes: [Data] { lock.withLock { hashes } }
@@ -161,6 +186,7 @@ nonisolated final class FakeAttest: AppAttesting, @unchecked Sendable {
     }
 
     func generateAssertion(_ keyID: String, clientDataHash: Data) async throws -> Data {
+        if invalidKeys.contains(keyID) { throw DCError(.invalidKey) }
         lock.withLock { hashes.append(clientDataHash) }
         return Data("assertion by \(keyID)".utf8)
     }
