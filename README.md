@@ -99,7 +99,7 @@ Tickets are read on the device and never uploaded. When Tical's server signs a p
 
 ## Website
 
-`docs/` is the app's website: a landing page, the privacy policy, and the support page, in plain HTML and CSS with no build step. Use `privacy.html` and `support.html` as the Privacy Policy and Support URLs in App Store Connect.
+`docs/` is the app's website: a landing page, the privacy policy, and the support page, in plain HTML and CSS with no build step. Use `privacy.html` and `support.html` as the Privacy Policy and Support URLs in App Store Connect. `sample-ticket.png` and `sample-ticket.pdf` are a made-up ticket for App Review to try Tical with; the review notes link to them.
 
 To publish it with GitHub Pages, choose **Settings ▸ Pages ▸ Deploy from a branch**, then `main` and `/docs`. It's served at `https://djui.github.io/tical/`, the address the pages' canonical and social preview links use; update them if you move the site to your own domain.
 
